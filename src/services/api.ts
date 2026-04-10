@@ -9,7 +9,12 @@
  * - Offline detection
  */
 
-import axios, { AxiosInstance, AxiosError, AxiosRequestConfig, InternalAxiosRequestConfig } from "axios";
+import axios, {
+  AxiosInstance,
+  AxiosError,
+  AxiosRequestConfig,
+  InternalAxiosRequestConfig,
+} from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
@@ -46,7 +51,7 @@ export class ApiError extends Error {
     public message: string,
     public status: number,
     public code?: string,
-    public details?: any
+    public details?: any,
   ) {
     super(message);
     this.name = "ApiError";
@@ -71,7 +76,7 @@ class ApiService {
       timeout: API_TIMEOUT,
       headers: {
         "Content-Type": "application/json",
-        "Accept": "application/json",
+        Accept: "application/json",
       },
       withCredentials: true, // Important for session cookies
     });
@@ -81,14 +86,14 @@ class ApiService {
       async (config) => {
         const fullUrl = `${config.baseURL}${config.url}`;
         log(`→ ${config.method?.toUpperCase()} ${fullUrl}`);
-        
+
         if (config.data) {
           // Log request body (redact sensitive fields)
           const redactedData = { ...config.data };
           if (redactedData.password) redactedData.password = "***REDACTED***";
           log("  Request body:", JSON.stringify(redactedData, null, 2));
         }
-        
+
         try {
           const token = await AsyncStorage.getItem("authToken");
           if (token) {
@@ -109,17 +114,21 @@ class ApiService {
     // Response interceptor - handle errors and logging
     this.client.interceptors.response.use(
       (response) => {
-        log(`← ${response.status} ${response.config.method?.toUpperCase()} ${response.config.url}`);
+        log(
+          `← ${response.status} ${response.config.method?.toUpperCase()} ${response.config.url}`,
+        );
         log("  Response:", JSON.stringify(response.data, null, 2));
         return response;
       },
       async (error: AxiosError) => {
         const config = error.config;
-        
+
         if (config) {
-          logError(`← ${error.response?.status || "NO RESPONSE"} ${config.method?.toUpperCase()} ${config.url}`);
+          logError(
+            `← ${error.response?.status || "NO RESPONSE"} ${config.method?.toUpperCase()} ${config.url}`,
+          );
         }
-        
+
         // Handle 401 (token expired / unauthorized)
         if (error.response?.status === 401) {
           log("  401 Unauthorized - clearing auth token");
@@ -133,7 +142,11 @@ class ApiService {
         // Handle timeout
         if (error.code === "ECONNABORTED") {
           logError("  Request timeout");
-          throw new ApiError("Request timeout - server took too long to respond", 408, "TIMEOUT");
+          throw new ApiError(
+            "Request timeout - server took too long to respond",
+            408,
+            "TIMEOUT",
+          );
         }
 
         // Handle network error
@@ -141,20 +154,37 @@ class ApiService {
           logError("  Network error - no response received");
           logError("  Error code:", error.code);
           logError("  Error message:", error.message);
-          
+          logError("  Base URL:", config?.baseURL || API_BASE_URL);
+          logError("  Platform:", Platform.OS);
+
           // Provide helpful message based on error type
           let message = "Network error - unable to connect to server";
           if (error.message.includes("Network Error")) {
-            message = "Unable to reach the server. Please check that the backend is running and accessible.";
+            message =
+              "Unable to reach the server. Check the backend URL, device network, and Expo API_URL configuration.";
           }
-          
+
+          if (
+            (config?.baseURL || API_BASE_URL).includes("127.0.0.1") &&
+            Platform.OS !== "web"
+          ) {
+            message =
+              "The app is pointing at localhost. Use your machine LAN IP or set EXPO_PUBLIC_API_URL for a physical device.";
+          } else if (
+            (config?.baseURL || API_BASE_URL).includes("10.0.2.2") &&
+            Platform.OS !== "android"
+          ) {
+            message =
+              "The app is using the Android emulator loopback URL on a non-Android target. Update EXPO_PUBLIC_API_URL.";
+          }
+
           throw new ApiError(message, 0, "NETWORK_ERROR");
         }
 
         // Handle other errors
         const status = error.response.status;
         const responseData = error.response.data as any;
-        
+
         logError("  Status:", status);
         logError("  Response data:", JSON.stringify(responseData, null, 2));
 
@@ -184,7 +214,7 @@ class ApiService {
    * Sleep utility for retry delays
    */
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**
@@ -193,7 +223,7 @@ class ApiService {
   private getRetryDelay(attempt: number): number {
     const baseDelay = Math.min(
       BASE_RETRY_DELAY_MS * Math.pow(2, attempt),
-      MAX_RETRY_DELAY_MS
+      MAX_RETRY_DELAY_MS,
     );
     // Add jitter (±10%) to prevent thundering herd
     const jitter = baseDelay * 0.1 * (Math.random() * 2 - 1);
@@ -213,7 +243,7 @@ class ApiService {
     return (
       status === 408 || // Request Timeout
       status === 429 || // Too Many Requests
-      status >= 500     // Server Errors
+      status >= 500 // Server Errors
     );
   }
 
@@ -224,7 +254,7 @@ class ApiService {
     method: "get" | "post" | "put" | "delete" | "patch",
     path: string,
     data?: any,
-    config?: AxiosRequestConfig & { skipRetry?: boolean }
+    config?: AxiosRequestConfig & { skipRetry?: boolean },
   ): Promise<T> {
     const maxRetries = config?.skipRetry ? 0 : MAX_RETRIES;
     let lastError: Error | null = null;
@@ -244,7 +274,9 @@ class ApiService {
         // Check if we should retry
         if (attempt < maxRetries && this.isRetryableError(error)) {
           const delay = this.getRetryDelay(attempt);
-          log(`Retry attempt ${attempt + 1}/${maxRetries} in ${delay}ms for ${path}`);
+          log(
+            `Retry attempt ${attempt + 1}/${maxRetries} in ${delay}ms for ${path}`,
+          );
           await this.sleep(delay);
           continue;
         }
@@ -267,7 +299,7 @@ class ApiService {
     if (error?.response) {
       const status = error.response.status;
       const responseData = error.response.data as any;
-      
+
       let message = "An error occurred";
       if (responseData) {
         if (responseData.error) {
@@ -295,13 +327,13 @@ class ApiService {
       return new ApiError(
         error?.message || "Network error - unable to connect to server",
         0,
-        "NETWORK_ERROR"
+        "NETWORK_ERROR",
       );
     }
 
     return new ApiError(
       error instanceof Error ? error.message : "Unknown error",
-      500
+      500,
     );
   }
 
@@ -309,11 +341,19 @@ class ApiService {
     return this.request("get", path, undefined, config);
   }
 
-  async post<T>(path: string, data: any, config?: AxiosRequestConfig): Promise<T> {
+  async post<T>(
+    path: string,
+    data: any,
+    config?: AxiosRequestConfig,
+  ): Promise<T> {
     return this.request("post", path, data, config);
   }
 
-  async put<T>(path: string, data: any, config?: AxiosRequestConfig): Promise<T> {
+  async put<T>(
+    path: string,
+    data: any,
+    config?: AxiosRequestConfig,
+  ): Promise<T> {
     return this.request("put", path, data, config);
   }
 
@@ -321,10 +361,14 @@ class ApiService {
     return this.request("delete", path, undefined, config);
   }
 
-  async patch<T>(path: string, data: any, config?: AxiosRequestConfig): Promise<T> {
+  async patch<T>(
+    path: string,
+    data: any,
+    config?: AxiosRequestConfig,
+  ): Promise<T> {
     return this.request("patch", path, data, config);
   }
-  
+
   /**
    * Get the base URL for debugging
    */
@@ -335,12 +379,16 @@ class ApiService {
   /**
    * Check if API is reachable
    */
-  async healthCheck(): Promise<{ healthy: boolean; latency?: number; error?: string }> {
+  async healthCheck(): Promise<{
+    healthy: boolean;
+    latency?: number;
+    error?: string;
+  }> {
     const startTime = Date.now();
     try {
-      await this.get<{ status: string }>('/health', { 
+      await this.get<{ status: string }>("/health", {
         timeout: 5000,
-        skipRetry: true 
+        skipRetry: true,
       } as any);
       return {
         healthy: true,
@@ -349,7 +397,7 @@ class ApiService {
     } catch (error) {
       return {
         healthy: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
       };
     }
   }
@@ -358,7 +406,7 @@ class ApiService {
    * Check if we're online
    */
   isOnline(): boolean {
-    if (typeof navigator !== 'undefined') {
+    if (typeof navigator !== "undefined") {
       return navigator.onLine;
     }
     return true; // Assume online on native

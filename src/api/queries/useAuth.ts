@@ -131,7 +131,7 @@ export function useLogout() {
     mutationFn: async () => {
       try {
         // Call logout endpoint to invalidate token on server
-        await apiService.post("/auth/logout");
+        await apiService.post("/auth/logout", {});
       } catch (error) {
         // Ignore errors on logout - proceed to clear local state
         console.log("Logout API call failed, clearing local state");

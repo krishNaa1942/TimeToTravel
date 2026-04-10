@@ -1,0 +1,59 @@
+/**
+ * SettingsSection Component - User settings with toggles
+ */
+import React, { memo, useCallback } from 'react';
+import { View, Text, StyleSheet, Pressable, Switch } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
+import { useUIStore } from '@/stores/uiStore';
+import type { SettingsSectionProps, SettingItem } from '../types';
+
+const SettingRow: React.FC<{ setting: SettingItem; onToggle: (id: string, value: boolean) => void }> = ({ setting, onToggle }) => {
+  const { themeDark } = useUIStore();
+  
+  const handleToggle = useCallback(async (value: boolean) => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onToggle(setting.id, value);
+  }, [setting.id, onToggle]);
+  
+  return (
+    <View style={styles.settingRow}>
+      <Text style={styles.settingIcon}>{setting.icon}</Text>
+      <Text style={[styles.settingLabel, themeDark && styles.textDark]}>{setting.label}</Text>
+      {setting.type === 'toggle' && (
+        <Switch
+          value={setting.value ?? false}
+          onValueChange={handleToggle}
+          trackColor={{ false: '#E5E7EB', true: '#8B5CF6' }}
+          thumbColor="#FFFFFF"
+        />
+      )}
+    </View>
+  );
+};
+
+const SettingsSectionComponent: React.FC<SettingsSectionProps> = ({ settings, onToggle }) => {
+  const { themeDark } = useUIStore();
+  
+  return (
+    <Animated.View entering={FadeIn.delay(700).duration(400)} style={[styles.container, themeDark && styles.containerDark]}>
+      <Text style={[styles.title, themeDark && styles.textDark]}>Settings</Text>
+      {settings.map((setting) => (
+        <SettingRow key={setting.id} setting={setting} onToggle={onToggle} />
+      ))}
+    </Animated.View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginHorizontal: 16, marginVertical: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 },
+  containerDark: { backgroundColor: '#1F2937' },
+  title: { fontSize: 16, fontWeight: '700', color: '#111827', marginBottom: 12 },
+  textDark: { color: '#F9FAFB' },
+  settingRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
+  settingIcon: { fontSize: 20, marginRight: 12 },
+  settingLabel: { flex: 1, fontSize: 14, color: '#374151', fontWeight: '500' },
+});
+
+export const SettingsSection = memo(SettingsSectionComponent);
+export default SettingsSection;

@@ -11,39 +11,90 @@ import Constants from "expo-constants";
 const isDevelopment = __DEV__;
 const isProduction = !__DEV__;
 
+function extractHost(value: string | undefined | null): string | null {
+  if (!value) return null;
+
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const normalized = trimmed.includes("://") ? trimmed : `http://${trimmed}`;
+
+  try {
+    const url = new URL(normalized);
+    return url.hostname || null;
+  } catch {
+    const hostPart = trimmed.split(":")[0];
+    return hostPart || null;
+  }
+}
+
+function getExpoHost(): string | null {
+  const hostCandidates = [
+    Constants.expoConfig?.hostUri,
+    Constants.expoConfig?.debuggerHost,
+    (Constants as any)?.manifest2?.debuggerHost,
+    (Constants as any)?.manifest?.debuggerHost,
+  ];
+
+  for (const candidate of hostCandidates) {
+    const host = extractHost(candidate);
+    if (host && host !== "localhost" && host !== "127.0.0.1") {
+      return host;
+    }
+  }
+
+  return null;
+}
+
 // API URLs - Use environment variables with fallbacks
 const getApiUrl = (): string => {
   // Priority: Environment variable > Expo extra > Platform default
-  
+
   // Check for environment variable (set in .env or app.json extra)
   const envApiUrl = process.env.EXPO_PUBLIC_API_URL;
   if (envApiUrl) {
     return envApiUrl;
   }
-  
+
   // Check Expo Constants (set in app.json under extra)
   const extraApiUrl = Constants.expoConfig?.extra?.apiUrl;
   if (extraApiUrl) {
     return extraApiUrl;
   }
-  
+
+  const lanIp = process.env.LAN_IP;
+  if (lanIp) {
+    return `http://${lanIp}:5001/api`;
+  }
+
   // Platform-specific defaults
   if (Platform.OS === "web") {
     // Web: Use same origin to avoid CORS issues
     return "/api";
   }
-  
+
   // Mobile: Use environment-based or localhost for development
   if (isDevelopment) {
     // For development, you can set your machine's IP here
     // Or use: npx expo start --tunnel to get a public URL
-    return "http://127.0.0.1:5001/api";
+    if (Platform.OS === "android") {
+      if (Constants.isDevice) {
+        const expoHost = getExpoHost();
+        if (expoHost) {
+          return `http://${expoHost}:5001/api`;
+        }
+      }
+      return "http://10.0.2.2:5001/api";
+    }
+
+    const expoHost = getExpoHost();
+    return `http://${expoHost || "127.0.0.1"}:5001/api`;
   }
-  
+
   // Production mobile - should be set via EXPO_PUBLIC_API_URL
   // This fallback will likely fail in production
   console.warn(
-    "No API URL configured for production. Set EXPO_PUBLIC_API_URL environment variable."
+    "No API URL configured for production. Set EXPO_PUBLIC_API_URL environment variable.",
   );
   return "https://api.timetotravel.app/api";
 };
@@ -96,9 +147,12 @@ export const DEBUG = {
 // Validation
 if (isProduction) {
   // Verify production configuration
-  if (API_BASE_URL.includes("127.0.0.1") || API_BASE_URL.includes("localhost")) {
+  if (
+    API_BASE_URL.includes("127.0.0.1") ||
+    API_BASE_URL.includes("localhost")
+  ) {
     console.error(
-      "Production build using localhost API URL. Set EXPO_PUBLIC_API_URL environment variable."
+      "Production build using localhost API URL. Set EXPO_PUBLIC_API_URL environment variable.",
     );
   }
 }

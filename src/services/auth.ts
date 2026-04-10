@@ -134,11 +134,11 @@ export const authService = {
       const { setToken, setUser } = useAuthStore.getState();
       const user: User = {
         id: String(response.user.id),
-        username: response.user.name,
+        name: response.user.name,  // Bug A2 fix: was `username` which doesn't exist on User type
         email: response.user.email,
       };
       
-      log("💾 Storing auth state for user:", user.username);
+      log("💾 Storing auth state for user:", user.name);
       
       // Store a marker token so our RootNavigator knows we're logged in
       await setToken("session-active");
@@ -241,11 +241,11 @@ export const authService = {
       const { setToken, setUser } = useAuthStore.getState();
       const user: User = {
         id: String(response.user.id),
-        username: response.user.name,
+        name: response.user.name,  // Bug A2 fix: was `username`
         email: response.user.email,
       };
       
-      log("💾 Storing auth state for new user:", user.username);
+      log("💾 Storing auth state for new user:", user.name);
       
       await setToken("session-active");
       setUser(user);
@@ -312,7 +312,7 @@ export const authService = {
         const { setToken, setUser } = useAuthStore.getState();
         const user: User = {
           id: String(response.user.id),
-          username: response.user.name,
+          name: response.user.name,  // Bug A2 fix: was `username`
           email: response.user.email,
         };
         await setToken("session-active");

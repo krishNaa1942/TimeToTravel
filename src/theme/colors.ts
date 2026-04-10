@@ -11,6 +11,7 @@ import { MD3LightTheme, MD3DarkTheme } from "react-native-paper";
 export const colors = {
   // Primary & Secondary
   primary: "#2563EB", // Blue (main brand color)
+  primaryDark: "#1D4ED8", // Darker blue for gradients
   secondary: "#EC4899", // Pink (accent)
   accent: "#F59E0B", // Amber (highlights)
 
@@ -18,6 +19,8 @@ export const colors = {
   background: "#FFFFFF", // Light mode background
   surface: "#F9FAFB", // Light mode surface
   text: "#1F2937", // Dark text
+  textSecondary: "#6B7280", // Secondary text
+  textTertiary: "#9CA3AF", // Tertiary/muted text
   gray: "#9CA3AF", // Gray text/disabled
 
   // Status Colors

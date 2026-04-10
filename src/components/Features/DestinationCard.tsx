@@ -63,16 +63,22 @@ export default React.memo(function DestinationCard({
 
   const cardWidth = horizontal ? HORIZONTAL_CARD_WIDTH : GRID_CARD_WIDTH;
 
-  const rating = (Math.random() * (5.0 - 4.5) + 4.5).toFixed(1);
-  const reviewCount = Math.floor(Math.random() * 4000) + 120;
-  
-  const labelLower = destination.label.toLowerCase();
-  const regionLower = destination.region.toLowerCase();
+  // Bug C1 fix: deterministic rating/reviewCount from destination ID hash
+  // instead of Math.random() which flickers on every re-render
+  const idHash = destination.id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  const rating = (4.5 + (idHash % 5) * 0.1).toFixed(1);
+  const reviewCount = 120 + (idHash * 37) % 3880;
+
+  // Bug C2 fix: use category array from backend, not fragile label matching
+  const categorySet = new Set((destination.category || []).map(c => c.toLowerCase()));
   let tag = "Popular";
-  if (labelLower.includes("goa") || labelLower.includes("beach")) tag = "Coastal";
-  if (labelLower.includes("manali") || labelLower.includes("hill") || regionLower.includes("himachal")) tag = "Hill Station";
-  if (labelLower.includes("varanasi") || labelLower.includes("temple")) tag = "Spiritual";
-  if (labelLower.includes("delhi") || labelLower.includes("mumbai")) tag = "Metro City";
+  if (categorySet.has("beach") || categorySet.has("coastal")) tag = "Coastal";
+  else if (categorySet.has("hill station") || categorySet.has("mountain")) tag = "Hill Station";
+  else if (categorySet.has("spiritual") || categorySet.has("pilgrimage")) tag = "Spiritual";
+  else if (categorySet.has("metro") || categorySet.has("city")) tag = "Metro City";
+  else if (categorySet.has("adventure")) tag = "Adventure";
+  else if (categorySet.has("heritage") || categorySet.has("culture")) tag = "Heritage";
+  else if (categorySet.has("nature") || categorySet.has("wildlife")) tag = "Nature";
 
   return (
     <Pressable

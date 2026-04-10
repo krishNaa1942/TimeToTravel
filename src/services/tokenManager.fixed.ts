@@ -1,10 +1,10 @@
 /**
  * Secure Token Manager - PRODUCTION READY
  * =======================================
- * 
+ *
  * Single source of truth for all token operations.
  * Handles JWT tokens with secure storage, auto-refresh, and encryption.
- * 
+ *
  * CRITICAL: This is the ONLY place tokens should be stored/accessed.
  */
 
@@ -12,6 +12,7 @@ import * as SecureStore from "expo-secure-store";
 import { Platform, AppState, AppStateStatus } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { EventEmitter } from "events";
+import { API_BASE_URL } from "@/constants/config";
 
 // ─────────────────────────────────────────────────────────────
 // CONFIGURATION
@@ -53,7 +54,7 @@ export interface TokenState {
   userId: string | null;
 }
 
-export type TokenEvent = 
+export type TokenEvent =
   | "token_refreshed"
   | "token_expired"
   | "token_cleared"
@@ -98,7 +99,7 @@ class WebEncryption {
 
   static async encrypt(plaintext: string): Promise<string> {
     const key = await this.getEncryptionKey();
-    
+
     // Simple XOR-based encryption (use AES-GCM in production)
     const keyBytes = new TextEncoder().encode(key);
     const plainBytes = new TextEncoder().encode(plaintext);
@@ -207,21 +208,23 @@ class SecureTokenStorage {
 
 /**
  * Token Manager - SINGLE SOURCE OF TRUTH
- * 
+ *
  * All token operations MUST go through this class.
  * DO NOT store tokens anywhere else.
  */
 export class TokenManager extends EventEmitter {
   private static instance: TokenManager;
   private storage: SecureTokenStorage;
-  
+
   // Refresh mutex to prevent race conditions
   private refreshPromise: Promise<string | null> | null = null;
   private isRefreshing = false;
-  
+
   // Token state cache
   private cachedExpiry: number | null = null;
-  private appStateSubscription: ReturnType<typeof AppState.addEventListener> | null = null;
+  private appStateSubscription: ReturnType<
+    typeof AppState.addEventListener
+  > | null = null;
 
   private constructor() {
     super();
@@ -245,7 +248,7 @@ export class TokenManager extends EventEmitter {
   private setupAppStateListener(): void {
     this.appStateSubscription = AppState.addEventListener(
       "change",
-      this.handleAppStateChange.bind(this)
+      this.handleAppStateChange.bind(this),
     );
   }
 
@@ -253,8 +256,10 @@ export class TokenManager extends EventEmitter {
     if (nextState === "active") {
       // Validate token when app comes to foreground
       const isExpired = await this.isTokenExpired();
-      if (isExpired && await this.hasRefreshToken()) {
-        console.log("[TokenManager] Token expired on app resume, refreshing...");
+      if (isExpired && (await this.hasRefreshToken())) {
+        console.log(
+          "[TokenManager] Token expired on app resume, refreshing...",
+        );
         await this.refreshAccessToken();
       }
     }
@@ -265,8 +270,7 @@ export class TokenManager extends EventEmitter {
    * MUST be provided by the API service
    */
   private getApiBaseUrl(): string {
-    // This should be injected via setApiBaseUrl or imported from config
-    return process.env.EXPO_PUBLIC_API_URL || "http://localhost:5000";
+    return API_BASE_URL;
   }
 
   // ───────────────────────────────────────────────────────────
@@ -275,12 +279,12 @@ export class TokenManager extends EventEmitter {
 
   /**
    * Store tokens after successful login
-   * 
+   *
    * @param payload - Token payload from auth server
    */
   async storeTokens(payload: TokenPayload): Promise<void> {
     const { accessToken, refreshToken, expiresIn, userId } = payload;
-    
+
     const expiryTime = Date.now() + expiresIn * 1000;
     this.cachedExpiry = expiryTime;
 
@@ -289,7 +293,9 @@ export class TokenManager extends EventEmitter {
       this.storage.setItem(TOKEN_KEYS.ACCESS, accessToken),
       this.storage.setItem(TOKEN_KEYS.REFRESH, refreshToken),
       this.storage.setItem(TOKEN_KEYS.EXPIRY, String(expiryTime)),
-      userId ? this.storage.setItem(TOKEN_KEYS.USER_ID, userId) : Promise.resolve(),
+      userId
+        ? this.storage.setItem(TOKEN_KEYS.USER_ID, userId)
+        : Promise.resolve(),
     ]);
 
     console.log("[TokenManager] Tokens stored securely");
@@ -323,7 +329,9 @@ export class TokenManager extends EventEmitter {
   async isTokenExpired(): Promise<boolean> {
     // Use cached expiry if available
     if (this.cachedExpiry) {
-      return Date.now() + SECURITY_CONFIG.REFRESH_BUFFER_MS >= this.cachedExpiry;
+      return (
+        Date.now() + SECURITY_CONFIG.REFRESH_BUFFER_MS >= this.cachedExpiry
+      );
     }
 
     const expiryTime = await this.storage.getItem(TOKEN_KEYS.EXPIRY);
@@ -361,7 +369,7 @@ export class TokenManager extends EventEmitter {
   /**
    * Refresh the access token using refresh token.
    * Uses mutex to prevent concurrent refresh attempts.
-   * 
+   *
    * @returns New access token or null if refresh failed
    */
   async refreshAccessToken(): Promise<string | null> {
@@ -397,11 +405,17 @@ export class TokenManager extends EventEmitter {
 
     let lastError: Error | null = null;
 
-    for (let attempt = 1; attempt <= SECURITY_CONFIG.MAX_REFRESH_RETRIES; attempt++) {
+    for (
+      let attempt = 1;
+      attempt <= SECURITY_CONFIG.MAX_REFRESH_RETRIES;
+      attempt++
+    ) {
       try {
-        console.log(`[TokenManager] Refresh attempt ${attempt}/${SECURITY_CONFIG.MAX_REFRESH_RETRIES}`);
-        
-        const response = await fetch(`${this.getApiBaseUrl()}/api/auth/refresh`, {
+        console.log(
+          `[TokenManager] Refresh attempt ${attempt}/${SECURITY_CONFIG.MAX_REFRESH_RETRIES}`,
+        );
+
+        const response = await fetch(`${this.getApiBaseUrl()}/auth/refresh`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -412,7 +426,9 @@ export class TokenManager extends EventEmitter {
         if (!response.ok) {
           if (response.status === 401) {
             // Refresh token is invalid - must re-login
-            console.log("[TokenManager] Refresh token invalid, clearing tokens");
+            console.log(
+              "[TokenManager] Refresh token invalid, clearing tokens",
+            );
             await this.clearTokens();
             this.emit("token_expired");
             return null;
@@ -431,15 +447,19 @@ export class TokenManager extends EventEmitter {
 
         console.log("[TokenManager] Token refreshed successfully");
         this.emit("token_refreshed", { expiresAt: this.cachedExpiry });
-        
+
         return data.access_token;
       } catch (error) {
         lastError = error as Error;
-        console.error(`[TokenManager] Refresh attempt ${attempt} failed:`, error);
+        console.error(
+          `[TokenManager] Refresh attempt ${attempt} failed:`,
+          error,
+        );
 
         // Exponential backoff
         if (attempt < SECURITY_CONFIG.MAX_REFRESH_RETRIES) {
-          const delay = SECURITY_CONFIG.REFRESH_RETRY_DELAY_MS * Math.pow(2, attempt - 1);
+          const delay =
+            SECURITY_CONFIG.REFRESH_RETRY_DELAY_MS * Math.pow(2, attempt - 1);
           await this.sleep(delay);
         }
       }
@@ -462,7 +482,7 @@ export class TokenManager extends EventEmitter {
   /**
    * Get a valid access token, refreshing if necessary.
    * This is the primary method for API interceptors.
-   * 
+   *
    * @returns Valid access token or null if unavailable
    */
   async getValidToken(): Promise<string | null> {
@@ -492,7 +512,7 @@ export class TokenManager extends EventEmitter {
    */
   async clearTokens(): Promise<void> {
     console.log("[TokenManager] Clearing all tokens");
-    
+
     this.cachedExpiry = null;
 
     await Promise.all([
@@ -514,7 +534,7 @@ export class TokenManager extends EventEmitter {
     // Notify server to invalidate refresh token
     if (refreshToken) {
       try {
-        await fetch(`${this.getApiBaseUrl()}/api/auth/logout`, {
+        await fetch(`${this.getApiBaseUrl()}/auth/logout`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

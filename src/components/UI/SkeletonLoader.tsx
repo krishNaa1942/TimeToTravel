@@ -234,6 +234,80 @@ export const MapSkeleton: React.FC = () => (
 );
 
 // ─────────────────────────────────────────────────────────────
+// DESTINATION DETAIL SKELETON
+// ─────────────────────────────────────────────────────────────
+
+export const DestinationDetailSkeleton: React.FC = () => (
+  <View style={styles.detailContainer}>
+    {/* Hero skeleton */}
+    <View style={styles.detailHeroSkeleton}>
+      <Shimmer width="100%" height={280} borderRadius={0} />
+      <View style={styles.detailHeroContent}>
+        <Shimmer width={200} height={34} borderRadius={6} />
+        <Shimmer width={120} height={16} borderRadius={4} style={{ marginTop: 8 }} />
+      </View>
+    </View>
+    
+    {/* Chips skeleton */}
+    <View style={styles.detailChipsSkeleton}>
+      <Shimmer width={100} height={32} borderRadius={16} />
+      <Shimmer width={80} height={32} borderRadius={16} style={{ marginLeft: 8 }} />
+      <Shimmer width={90} height={32} borderRadius={16} style={{ marginLeft: 8 }} />
+    </View>
+    
+    {/* Highlight text skeleton */}
+    <View style={styles.detailSectionSkeleton}>
+      <Shimmer width="90%" height={14} borderRadius={4} />
+      <Shimmer width="80%" height={14} borderRadius={4} style={{ marginTop: 8 }} />
+      <Shimmer width="60%" height={14} borderRadius={4} style={{ marginTop: 8 }} />
+    </View>
+    
+    {/* Weather card skeleton */}
+    <View style={styles.detailSectionSkeleton}>
+      <Shimmer width={150} height={20} borderRadius={6} />
+      <View style={styles.weatherCardSkeleton}>
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <Shimmer width={64} height={64} borderRadius={32} />
+          <View style={{ marginLeft: 16 }}>
+            <Shimmer width={80} height={28} borderRadius={6} />
+            <Shimmer width={120} height={14} borderRadius={4} style={{ marginTop: 6 }} />
+          </View>
+        </View>
+      </View>
+    </View>
+    
+    {/* Safety skeleton */}
+    <View style={styles.detailSectionSkeleton}>
+      <Shimmer width={130} height={20} borderRadius={6} />
+      <View style={styles.safetyCardSkeleton}>
+        <Shimmer width={60} height={60} borderRadius={30} />
+        <View style={{ marginLeft: 16, flex: 1 }}>
+          <Shimmer width="60%" height={16} borderRadius={4} />
+          <Shimmer width="80%" height={12} borderRadius={4} style={{ marginTop: 6 }} />
+        </View>
+      </View>
+    </View>
+    
+    {/* Gallery skeleton */}
+    <View style={styles.detailSectionSkeleton}>
+      <Shimmer width={120} height={20} borderRadius={6} />
+      <View style={styles.gallerySkeleton}>
+        <Shimmer width={220} height={150} borderRadius={12} />
+        <Shimmer width={220} height={150} borderRadius={12} style={{ marginLeft: 8 }} />
+        <Shimmer width={220} height={150} borderRadius={12} style={{ marginLeft: 8 }} />
+      </View>
+    </View>
+    
+    {/* Actions skeleton */}
+    <View style={styles.detailActionsSkeleton}>
+      <Shimmer width={44} height={44} borderRadius={22} />
+      <Shimmer width={120} height={48} borderRadius={14} style={{ marginLeft: 8, flex: 1 }} />
+      <Shimmer width={120} height={48} borderRadius={14} style={{ marginLeft: 8, flex: 1 }} />
+    </View>
+  </View>
+);
+
+// ─────────────────────────────────────────────────────────────
 // STYLES
 // ─────────────────────────────────────────────────────────────
 
@@ -338,6 +412,55 @@ const styles = StyleSheet.create({
   },
   mapPills: {
     marginLeft: 12,
+  },
+  
+  // Destination Detail skeleton
+  detailContainer: {
+    flex: 1,
+  },
+  detailHeroSkeleton: {
+    height: 280,
+    position: "relative",
+  },
+  detailHeroContent: {
+    position: "absolute",
+    bottom: 24,
+    left: 16,
+    right: 16,
+  },
+  detailChipsSkeleton: {
+    flexDirection: "row",
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  detailSectionSkeleton: {
+    paddingHorizontal: 16,
+    paddingTop: 20,
+    marginBottom: 8,
+  },
+  weatherCardSkeleton: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 12,
+  },
+  safetyCardSkeleton: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 12,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  gallerySkeleton: {
+    flexDirection: "row",
+    marginTop: 12,
+  },
+  detailActionsSkeleton: {
+    flexDirection: "row",
+    paddingHorizontal: 16,
+    paddingVertical: 20,
+    alignItems: "center",
   },
 });
 

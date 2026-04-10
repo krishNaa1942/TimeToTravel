@@ -340,7 +340,7 @@ export default function TripWorkspaceScreen() {
           refreshControl={
             <RefreshControl
               refreshing={detailLoading || isRefetching}
-              onRefresh={() => queryClient.invalidateQueries({ queryKey: [queryKeys.tripDetail, currentTrip.id] })}
+              onRefresh={() => queryClient.invalidateQueries({ queryKey: queryKeys.trips.detail(String(currentTrip.id)) })}
               tintColor={colors.primary}
             />
           }

@@ -29,7 +29,9 @@ export const journalService = {
   },
 
   async listNotes(destination?: string): Promise<{ notes: TravelNote[] }> {
-    const q = destination ? `?destination=${encodeURIComponent(destination)}` : "";
+    const q = destination
+      ? `?destination=${encodeURIComponent(destination)}`
+      : "";
     return apiService.get(`/notes${q}`);
   },
 
@@ -37,7 +39,10 @@ export const journalService = {
     return apiService.get(`/notes/${id}`);
   },
 
-  async updateNote(id: number, data: Partial<TravelNote>): Promise<{ note: TravelNote }> {
+  async updateNote(
+    id: number,
+    data: Partial<TravelNote>,
+  ): Promise<{ note: TravelNote }> {
     return apiService.put(`/notes/${id}`, data);
   },
 
@@ -46,7 +51,9 @@ export const journalService = {
   },
 
   async communityNotes(destination?: string): Promise<{ notes: TravelNote[] }> {
-    const q = destination ? `?destination=${encodeURIComponent(destination)}` : "";
+    const q = destination
+      ? `?destination=${encodeURIComponent(destination)}`
+      : "";
     return apiService.get(`/notes/community${q}`);
   },
 };

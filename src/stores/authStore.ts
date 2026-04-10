@@ -79,7 +79,12 @@ export const useAuthStore = create<AuthStore>()(
       // Action: Logout
       logout: async () => {
         try {
-          await AsyncStorage.removeItem("authToken");
+          await AsyncStorage.multiRemove([
+            "authToken",
+            "accessToken",
+            "refreshToken",
+            "tokenExpiry",
+          ]);
           set({ token: null, user: null, isAuthenticated: false });
         } catch (error) {
           console.error("Failed to logout:", error);
@@ -119,8 +124,8 @@ export const useAuthStore = create<AuthStore>()(
         user: state.user,
         isAuthenticated: state.isAuthenticated,
       }),
-    }
-  )
+    },
+  ),
 );
 
 export default useAuthStore;

@@ -3,17 +3,85 @@
  */
 
 import { Platform } from "react-native";
+import Constants from "expo-constants";
 
-// Use localhost for web (same-origin avoids CORS cookie issues),
-// LAN IP for native mobile (Expo Go / dev build).
-// For mobile: Run `ipconfig getifaddr en0` (macOS) or `hostname -I` (Linux) to get your LAN IP
-// and update the MOBILE_API_URL below.
-const WEB_API_URL = "http://127.0.0.1:5001/api";
-const MOBILE_API_URL = "http://192.168.31.111:5001/api"; // Update this to your machine's LAN IP
+const API_PORT = 5001;
 
-export const API_BASE_URL = Platform.OS === "web"
-  ? WEB_API_URL
-  : MOBILE_API_URL;
+function buildApiUrl(host: string): string {
+  return `http://${host}:${API_PORT}/api`;
+}
+
+function extractHost(value: string | undefined | null): string | null {
+  if (!value) return null;
+
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const normalized = trimmed.includes("://") ? trimmed : `http://${trimmed}`;
+
+  try {
+    const url = new URL(normalized);
+    return url.hostname || null;
+  } catch {
+    const hostPart = trimmed.split(":")[0];
+    return hostPart || null;
+  }
+}
+
+function getExpoHost(): string | null {
+  const hostCandidates = [
+    Constants.expoConfig?.hostUri,
+    Constants.expoConfig?.debuggerHost,
+    (Constants as any)?.manifest2?.debuggerHost,
+    (Constants as any)?.manifest?.debuggerHost,
+  ];
+
+  for (const candidate of hostCandidates) {
+    const host = extractHost(candidate);
+    if (host && host !== "localhost" && host !== "127.0.0.1") {
+      return host;
+    }
+  }
+
+  return null;
+}
+
+const getApiUrl = (): string => {
+  const envApiUrl = process.env.EXPO_PUBLIC_API_URL;
+  if (envApiUrl) {
+    return envApiUrl;
+  }
+
+  const extraApiUrl = Constants.expoConfig?.extra?.apiUrl;
+  if (extraApiUrl) {
+    return extraApiUrl;
+  }
+
+  const lanIp = process.env.LAN_IP;
+  if (lanIp) {
+    return buildApiUrl(lanIp);
+  }
+
+  if (Platform.OS === "web") {
+    return "/api";
+  }
+
+  if (Platform.OS === "android") {
+    if (Constants.isDevice) {
+      const expoHost = getExpoHost();
+      if (expoHost) {
+        return buildApiUrl(expoHost);
+      }
+    }
+
+    return buildApiUrl("10.0.2.2");
+  }
+
+  const expoHost = getExpoHost();
+  return buildApiUrl(expoHost || "127.0.0.1");
+};
+
+export const API_BASE_URL = getApiUrl();
 
 export const API_TIMEOUT = 15000; // 15 seconds
 

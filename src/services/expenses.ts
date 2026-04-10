@@ -37,12 +37,16 @@ export const expenseService = {
   },
 
   async listExpenses(destination?: string): Promise<{ expenses: Expense[] }> {
-    const q = destination ? `?destination=${encodeURIComponent(destination)}` : "";
+    const q = destination
+      ? `?destination=${encodeURIComponent(destination)}`
+      : "";
     return apiService.get(`/expenses${q}`);
   },
 
   async getSummary(destination?: string): Promise<ExpenseSummary> {
-    const q = destination ? `?destination=${encodeURIComponent(destination)}` : "";
+    const q = destination
+      ? `?destination=${encodeURIComponent(destination)}`
+      : "";
     return apiService.get(`/expenses/summary${q}`);
   },
 

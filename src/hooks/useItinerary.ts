@@ -153,7 +153,7 @@ export function useItinerary(options: UseItineraryOptions = {}): UseItineraryRet
   const mountedRef = useRef(true);
 
   // Store
-  const { setCachedItinerary, getCachedItinerary } = useTravelIntelligence();
+  const { setCachedItinerary, getCachedItinerary, logSearch } = useTravelIntelligence();
 
   // Cleanup on unmount
   useEffect(() => {
@@ -320,6 +320,9 @@ export function useItinerary(options: UseItineraryOptions = {}): UseItineraryRet
         await cache.set(`itinerary:${normalizedQuery}`, { itinerary, route }, { ttl: cacheTTL });
       }
 
+      // Bug 2.3 fix: log the search to keep recent searches + inferred preferences up to date
+      logSearch(query);
+
       updateProgress("complete", 100);
 
       setState({
@@ -346,7 +349,7 @@ export function useItinerary(options: UseItineraryOptions = {}): UseItineraryRet
         progress: { step: "error", percentage: 0 },
       }));
     }
-  }, [cacheEnabled, cacheTTL, maxRetries, getCachedItinerary, setCachedItinerary, updateProgress]);
+  }, [cacheEnabled, cacheTTL, maxRetries, getCachedItinerary, setCachedItinerary, updateProgress, logSearch]);
 
   // Retry last query
   const retry = useCallback(async () => {

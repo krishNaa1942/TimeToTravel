@@ -1,7 +1,7 @@
 /**
  * API Service - PRODUCTION READY
  * ==============================
- * 
+ *
  * Centralized HTTP client with:
  * - Automatic token injection
  * - Token refresh on 401
@@ -11,17 +11,23 @@
  * - Offline queue integration
  */
 
-import axios, { AxiosInstance, AxiosError, AxiosRequestConfig, InternalAxiosRequestConfig } from "axios";
+import axios, {
+  AxiosInstance,
+  AxiosError,
+  AxiosRequestConfig,
+  InternalAxiosRequestConfig,
+} from "axios";
 import { Platform } from "react-native";
 import tokenManager from "./tokenManager.fixed";
 import { useAuthStore } from "@/stores/authStore.fixed";
+import { API_BASE_URL } from "@/constants/config";
 
 // ─────────────────────────────────────────────────────────────
 // CONFIGURATION
 // ─────────────────────────────────────────────────────────────
 
 const API_CONFIG = {
-  BASE_URL: process.env.EXPO_PUBLIC_API_URL || "http://localhost:5000/api",
+  BASE_URL: API_BASE_URL,
   TIMEOUT: 30000, // 30 seconds
   MAX_RETRIES: 3,
   RETRY_DELAY_MS: 1000,
@@ -79,17 +85,26 @@ class SecureLogger {
 
   log(...args: any[]) {
     if (!this.enabled) return;
-    console.log("🌐 [API]", ...args.map((a) => (typeof a === "object" ? this.redact(a) : a)));
+    console.log(
+      "🌐 [API]",
+      ...args.map((a) => (typeof a === "object" ? this.redact(a) : a)),
+    );
   }
 
   error(...args: any[]) {
     if (!this.enabled) return;
-    console.error("🌐❌ [API]", ...args.map((a) => (typeof a === "object" ? this.redact(a) : a)));
+    console.error(
+      "🌐❌ [API]",
+      ...args.map((a) => (typeof a === "object" ? this.redact(a) : a)),
+    );
   }
 
   warn(...args: any[]) {
     if (!this.enabled) return;
-    console.warn("⚠️ [API]", ...args.map((a) => (typeof a === "object" ? this.redact(a) : a)));
+    console.warn(
+      "⚠️ [API]",
+      ...args.map((a) => (typeof a === "object" ? this.redact(a) : a)),
+    );
   }
 }
 
@@ -105,7 +120,7 @@ export class ApiError extends Error {
     public status: number,
     public code?: string,
     public details?: any,
-    public retryable: boolean = false
+    public retryable: boolean = false,
   ) {
     super(message);
     this.name = "ApiError";
@@ -178,7 +193,7 @@ class ApiService {
     this.client.interceptors.request.use(
       async (config: InternalAxiosRequestConfig) => {
         const url = config.url || "";
-        
+
         // Skip auth for public endpoints
         if (this.isPublicEndpoint(url)) {
           logger.log(`→ ${config.method?.toUpperCase()} ${url} (public)`);
@@ -206,7 +221,7 @@ class ApiService {
       (error) => {
         logger.error("Request interceptor error:", error);
         return Promise.reject(error);
-      }
+      },
     );
   }
 
@@ -218,7 +233,7 @@ class ApiService {
     this.client.interceptors.response.use(
       (response) => {
         logger.log(
-          `← ${response.status} ${response.config.method?.toUpperCase()} ${response.config.url}`
+          `← ${response.status} ${response.config.method?.toUpperCase()} ${response.config.url}`,
         );
         return response;
       },
@@ -245,13 +260,13 @@ class ApiService {
 
             if (newToken && config) {
               logger.log("  ✓ Token refreshed, retrying request");
-              
+
               // Update auth header
               config.headers.Authorization = `Bearer ${newToken}`;
-              
+
               // Mark to prevent infinite loop
               config._skipAuthRefresh = true;
-              
+
               // Retry original request
               return this.client.request(config);
             }
@@ -265,16 +280,29 @@ class ApiService {
           useAuthStore.getState().logout();
 
           return Promise.reject(
-            new ApiError("Session expired. Please log in again.", 401, "SESSION_EXPIRED")
+            new ApiError(
+              "Session expired. Please log in again.",
+              401,
+              "SESSION_EXPIRED",
+            ),
           );
         }
 
         // ─────────────────────────────────────────────────────
         // HANDLE TIMEOUT
         // ─────────────────────────────────────────────────────
-        if (error.code === "ECONNABORTED" || error.message?.includes("timeout")) {
+        if (
+          error.code === "ECONNABORTED" ||
+          error.message?.includes("timeout")
+        ) {
           return Promise.reject(
-            new ApiError("Request timeout - server took too long to respond", 408, "TIMEOUT", null, true)
+            new ApiError(
+              "Request timeout - server took too long to respond",
+              408,
+              "TIMEOUT",
+              null,
+              true,
+            ),
           );
         }
 
@@ -288,8 +316,8 @@ class ApiService {
               0,
               "NETWORK_ERROR",
               null,
-              true
-            )
+              true,
+            ),
           );
         }
 
@@ -301,9 +329,11 @@ class ApiService {
 
           if (retryCount < API_CONFIG.MAX_RETRIES) {
             config._retry = retryCount + 1;
-            
+
             const delay = API_CONFIG.RETRY_DELAY_MS * Math.pow(2, retryCount);
-            logger.log(`  Retrying in ${delay}ms (attempt ${config._retry}/${API_CONFIG.MAX_RETRIES})`);
+            logger.log(
+              `  Retrying in ${delay}ms (attempt ${config._retry}/${API_CONFIG.MAX_RETRIES})`,
+            );
 
             await this.sleep(delay);
             return this.client.request(config);
@@ -314,7 +344,7 @@ class ApiService {
         // CONVERT TO API ERROR
         // ─────────────────────────────────────────────────────
         return Promise.reject(ApiError.fromAxiosError(error));
-      }
+      },
     );
   }
 
@@ -348,17 +378,29 @@ class ApiService {
     return response.data;
   }
 
-  async post<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
+  async post<T>(
+    url: string,
+    data?: any,
+    config?: AxiosRequestConfig,
+  ): Promise<T> {
     const response = await this.client.post<T>(url, data, config);
     return response.data;
   }
 
-  async put<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
+  async put<T>(
+    url: string,
+    data?: any,
+    config?: AxiosRequestConfig,
+  ): Promise<T> {
     const response = await this.client.put<T>(url, data, config);
     return response.data;
   }
 
-  async patch<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
+  async patch<T>(
+    url: string,
+    data?: any,
+    config?: AxiosRequestConfig,
+  ): Promise<T> {
     const response = await this.client.patch<T>(url, data, config);
     return response.data;
   }
@@ -374,7 +416,7 @@ class ApiService {
   async upload<T>(
     url: string,
     file: File | Blob | FormData,
-    onProgress?: (progress: number) => void
+    onProgress?: (progress: number) => void,
   ): Promise<T> {
     const formData = file instanceof FormData ? file : new FormData();
     if (!(file instanceof FormData)) {
@@ -387,7 +429,9 @@ class ApiService {
       },
       onUploadProgress: (progressEvent) => {
         if (onProgress && progressEvent.total) {
-          const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          const progress = Math.round(
+            (progressEvent.loaded * 100) / progressEvent.total,
+          );
           onProgress(progress);
         }
       },

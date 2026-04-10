@@ -30,11 +30,20 @@ export type GroupType = 'solo' | 'couple' | 'family' | 'friends';
 export type SortBy = 'rating' | 'popularity' | 'price' | 'distance';
 export type ViewMode = 'list' | 'grid' | 'map';
 
+export interface NotificationSettings {
+  pushEnabled: boolean;
+  emailEnabled: boolean;
+  tripReminders: boolean;
+  priceAlerts: boolean;
+  destinationUpdates: boolean;
+}
+
 export interface UserPreferences {
   travelStyles: TravelStyle[];
   budgetLevel: BudgetLevel;
   preferredSeason: Season;
   groupType: GroupType;
+  notifications: NotificationSettings;
 }
 
 export interface FilterState {
@@ -82,11 +91,20 @@ export interface PreferenceState {
 // DEFAULTS
 // ─────────────────────────────────────────────────────────────
 
+const defaultNotificationSettings: NotificationSettings = {
+  pushEnabled: true,
+  emailEnabled: true,
+  tripReminders: true,
+  priceAlerts: true,
+  destinationUpdates: false,
+};
+
 const defaultPreferences: UserPreferences = {
   travelStyles: [],
   budgetLevel: 'mid-range',
   preferredSeason: 'any',
   groupType: 'couple',
+  notifications: defaultNotificationSettings,
 };
 
 const defaultFilters: FilterState = {

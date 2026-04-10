@@ -3,7 +3,7 @@
  * Delays updating a value until a specified time has passed without changes
  */
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 export function useDebounce<T>(value: T, delay: number = 300): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -25,38 +25,59 @@ export function useDebounce<T>(value: T, delay: number = 300): T {
  * useDebouncedCallback Hook
  * Returns a debounced version of the callback
  */
+export interface DebouncedCallback<T extends (...args: any[]) => any> {
+  (...args: Parameters<T>): void;
+  cancel: () => void;
+  flush: () => void;
+}
+
 export function useDebouncedCallback<T extends (...args: any[]) => any>(
   callback: T,
-  delay: number = 300
-): T {
+  delay: number = 300,
+): DebouncedCallback<T> {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const callbackRef = useRef(callback);
+  const lastArgsRef = useRef<Parameters<T> | null>(null);
 
   // Keep callback ref updated
   useEffect(() => {
     callbackRef.current = callback;
   }, [callback]);
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
+  const cancel = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
   }, []);
 
-  const debouncedCallback = useCallback(
-    ((...args: Parameters<T>) => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
+  const flush = useCallback(() => {
+    if (!lastArgsRef.current) {
+      return;
+    }
+
+    const args = lastArgsRef.current;
+    cancel();
+    callbackRef.current(...args);
+  }, [cancel]);
+
+  // Cleanup on unmount
+  useEffect(() => cancel, [cancel]);
+
+  const debouncedCallback = useMemo(() => {
+    const fn = ((...args: Parameters<T>) => {
+      lastArgsRef.current = args;
+      cancel();
       timeoutRef.current = setTimeout(() => {
+        timeoutRef.current = null;
         callbackRef.current(...args);
       }, delay);
-    }) as T,
-    [delay]
-  );
+    }) as DebouncedCallback<T>;
+
+    fn.cancel = cancel;
+    fn.flush = flush;
+    return fn;
+  }, [cancel, delay, flush]);
 
   return debouncedCallback;
 }

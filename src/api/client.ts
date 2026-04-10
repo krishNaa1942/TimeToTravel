@@ -5,6 +5,7 @@
  */
 
 import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from "axios";
+import { API_BASE_URL } from "../constants/config";
 import { secureStorage } from "../services/secureStorage";
 
 // ─────────────────────────────────────────────────────────────
@@ -72,14 +73,14 @@ class ApiClient {
   private isRefreshing = false;
 
   constructor() {
-    const baseURL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:5000/api";
+    const baseURL = API_BASE_URL;
 
     this.client = axios.create({
       baseURL,
       timeout: 30000,
       headers: {
         "Content-Type": "application/json",
-        "Accept": "application/json",
+        Accept: "application/json",
       },
     });
 
@@ -96,7 +97,7 @@ class ApiClient {
             config.headers.Authorization = `Bearer ${token}`;
           }
         }
-        
+
         const deviceId = await secureStorage.getDeviceId();
         if (deviceId) {
           config.headers["X-Device-ID"] = deviceId;
@@ -104,7 +105,7 @@ class ApiClient {
 
         return config;
       },
-      (error) => Promise.reject(error)
+      (error) => Promise.reject(error),
     );
 
     // Response interceptor
@@ -123,13 +124,13 @@ class ApiClient {
         if (config?.retryCount < MAX_RETRIES && isRetryable(error)) {
           config.retryCount = (config.retryCount || 0) + 1;
           const delay = calculateDelay(config.retryCount);
-          
+
           await new Promise((resolve) => setTimeout(resolve, delay));
           return this.client.request(config);
         }
 
         return Promise.reject(error);
-      }
+      },
     );
   }
 
@@ -160,7 +161,7 @@ class ApiClient {
     try {
       const response = await axios.post(
         `${this.client.defaults.baseURL}/auth/refresh`,
-        { refresh_token: refreshToken }
+        { refresh_token: refreshToken },
       );
 
       if (response.data.success) {
@@ -185,7 +186,7 @@ class ApiClient {
 
   async get<T = any>(
     endpoint: string,
-    options: RequestOptions = {}
+    options: RequestOptions = {},
   ): Promise<ApiResponse<T>> {
     return this.request<T>("GET", endpoint, undefined, options);
   }
@@ -193,7 +194,7 @@ class ApiClient {
   async post<T = any>(
     endpoint: string,
     data?: any,
-    options: RequestOptions = {}
+    options: RequestOptions = {},
   ): Promise<ApiResponse<T>> {
     return this.request<T>("POST", endpoint, data, options);
   }
@@ -201,7 +202,7 @@ class ApiClient {
   async put<T = any>(
     endpoint: string,
     data?: any,
-    options: RequestOptions = {}
+    options: RequestOptions = {},
   ): Promise<ApiResponse<T>> {
     return this.request<T>("PUT", endpoint, data, options);
   }
@@ -209,14 +210,14 @@ class ApiClient {
   async patch<T = any>(
     endpoint: string,
     data?: any,
-    options: RequestOptions = {}
+    options: RequestOptions = {},
   ): Promise<ApiResponse<T>> {
     return this.request<T>("PATCH", endpoint, data, options);
   }
 
   async delete<T = any>(
     endpoint: string,
-    options: RequestOptions = {}
+    options: RequestOptions = {},
   ): Promise<ApiResponse<T>> {
     return this.request<T>("DELETE", endpoint, undefined, options);
   }
@@ -225,7 +226,7 @@ class ApiClient {
     method: string,
     endpoint: string,
     data?: any,
-    options: RequestOptions = {}
+    options: RequestOptions = {},
   ): Promise<ApiResponse<T>> {
     try {
       const config: AxiosRequestConfig = {
@@ -242,7 +243,7 @@ class ApiClient {
       (config as any).retryCount = 0;
 
       const response = await this.client.request<T>(config);
-      
+
       return {
         success: true,
         data: response.data,

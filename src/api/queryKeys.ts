@@ -44,6 +44,17 @@ export const queryKeys = {
   },
 
   // ═══════════════════════════════════════════════════════════
+  // PROFILE
+  // ═══════════════════════════════════════════════════════════
+  
+  profile: {
+    all: ['profile'] as const,
+    data: () => [...queryKeys.profile.all, 'data'] as const,
+    stats: () => [...queryKeys.profile.all, 'stats'] as const,
+    achievements: () => [...queryKeys.profile.all, 'achievements'] as const,
+  },
+
+  // ═══════════════════════════════════════════════════════════
   // DESTINATIONS
   // ═══════════════════════════════════════════════════════════
   

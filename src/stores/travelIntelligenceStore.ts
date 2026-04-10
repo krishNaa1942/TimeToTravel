@@ -127,13 +127,13 @@ const inferTravelStyles = (query: string): TravelStyle[] => {
 
 const calculateMatchScore = (styles: TravelStyle[], preferences: UserPreferences): number => {
   if (preferences.travelStyle.length === 0) return 85;
-  
+
   const matchingStyles = styles.filter(s => preferences.travelStyle.includes(s));
   const baseScore = 70;
-  const styleBonus = (matchingStyles.length / Math.max(styles.length, 1)) * 20;
-  const randomVariance = Math.random() * 10;
-  
-  return Math.min(98, Math.round(baseScore + styleBonus + randomVariance));
+  const styleBonus = (matchingStyles.length / Math.max(styles.length, 1)) * 25;
+  // Bug 5.2 fix: removed Math.random() — scores must be deterministic
+  // so the same query shows the same score across app restarts.
+  return Math.min(98, Math.round(baseScore + styleBonus));
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -165,18 +165,25 @@ export const useTravelIntelligence = create<TravelIntelligenceState>()(
         })),
 
       // Trip Management
-      setActiveTrip: (dest, days, startDate = new Date().toISOString()) =>
+      setActiveTrip: (dest, days, startDate = new Date().toISOString()) => {
+        // D1 fix: calculate actual days until trip from startDate,
+        // not the trip duration which was incorrectly used before
+        const startMs = new Date(startDate).getTime();
+        const nowMs = Date.now();
+        const daysUntil = Math.max(0, Math.ceil((startMs - nowMs) / (1000 * 60 * 60 * 24)));
+
         set({
           activeTrip: {
             id: `trip-${Date.now()}`,
             destination: dest,
             startDate,
-            endDate: new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString(),
+            endDate: new Date(new Date(startDate).getTime() + days * 24 * 60 * 60 * 1000).toISOString(),
             days,
-            status: "planning",
+            status: daysUntil === 0 ? "ongoing" : "upcoming",
           },
-          daysUntilTrip: days,
-        }),
+          daysUntilTrip: daysUntil,
+        });
+      },
 
       clearActiveTrip: () => set({ activeTrip: null, daysUntilTrip: null }),
 
@@ -213,17 +220,25 @@ export const useTravelIntelligence = create<TravelIntelligenceState>()(
         set((state) => {
           const styles = inferTravelStyles(query);
           const matchScore = calculateMatchScore(styles, state.userPreferences);
-          
-          return {
-            aiCache: {
-              ...state.aiCache,
-              [query.toLowerCase().trim()]: {
-                ...data,
-                generatedAt: Date.now(),
-                matchScore,
-              },
+
+          const key = query.toLowerCase().trim();
+          const nextCache = {
+            ...state.aiCache,
+            [key]: {
+              ...data,
+              generatedAt: Date.now(),
+              matchScore,
             },
           };
+
+          // Bug 5.1 fix: LRU eviction — keep only the 20 most recent entries
+          // to prevent unbounded AsyncStorage growth and serialization overhead.
+          const entries = Object.entries(nextCache).sort(
+            ([, a], [, b]) => b.generatedAt - a.generatedAt
+          );
+          const cappedCache = Object.fromEntries(entries.slice(0, 20));
+
+          return { aiCache: cappedCache };
         }),
 
       getCachedItinerary: (query) => {

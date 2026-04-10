@@ -19,7 +19,7 @@ export interface Destination {
   // Extended properties (from API)
   rating?: number;
   popularity?: number;
-  budgetLevel?: 'budget' | 'mid-range' | 'luxury';
+  budgetLevel?: "budget" | "mid-range" | "luxury";
   isFavorite?: boolean;
   priceRange?: {
     min: number;
@@ -65,6 +65,8 @@ export interface ChatResponse {
   model: string;
   mode: string;
   session_id: string;
+  error_type?: string;
+  fallback_from?: string;
 }
 
 // ── Trips ─────────────────────────────────────────────────────
