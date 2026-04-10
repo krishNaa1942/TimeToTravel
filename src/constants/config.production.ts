@@ -1,0 +1,112 @@
+/**
+ * App Configuration Constants - Production Ready
+ * ================================================
+ * All configuration is environment-based for security and flexibility.
+ */
+
+import { Platform } from "react-native";
+import Constants from "expo-constants";
+
+// Environment detection
+const isDevelopment = __DEV__;
+const isProduction = !__DEV__;
+
+// API URLs - Use environment variables with fallbacks
+const getApiUrl = (): string => {
+  // Priority: Environment variable > Expo extra > Platform default
+  
+  // Check for environment variable (set in .env or app.json extra)
+  const envApiUrl = process.env.EXPO_PUBLIC_API_URL;
+  if (envApiUrl) {
+    return envApiUrl;
+  }
+  
+  // Check Expo Constants (set in app.json under extra)
+  const extraApiUrl = Constants.expoConfig?.extra?.apiUrl;
+  if (extraApiUrl) {
+    return extraApiUrl;
+  }
+  
+  // Platform-specific defaults
+  if (Platform.OS === "web") {
+    // Web: Use same origin to avoid CORS issues
+    return "/api";
+  }
+  
+  // Mobile: Use environment-based or localhost for development
+  if (isDevelopment) {
+    // For development, you can set your machine's IP here
+    // Or use: npx expo start --tunnel to get a public URL
+    return "http://127.0.0.1:5001/api";
+  }
+  
+  // Production mobile - should be set via EXPO_PUBLIC_API_URL
+  // This fallback will likely fail in production
+  console.warn(
+    "No API URL configured for production. Set EXPO_PUBLIC_API_URL environment variable."
+  );
+  return "https://api.timetotravel.app/api";
+};
+
+export const API_BASE_URL = getApiUrl();
+
+// API Configuration
+export const API_TIMEOUT = 15000; // 15 seconds
+export const API_RETRY_ATTEMPTS = 3;
+export const API_RETRY_DELAY = 1000; // 1 second
+
+// App Information
+export const APP_NAME = "Time To Travel";
+export const APP_VERSION = Constants.expoConfig?.version || "1.0.0";
+
+// Session Configuration (matches backend)
+export const SESSION_LIFETIME_MINUTES = 60;
+export const SESSION_REFRESH_THRESHOLD_MINUTES = 15;
+export const SESSION_REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes in ms
+
+// Pagination defaults
+export const DEFAULT_PAGE_SIZE = 20;
+export const MAX_PAGE_SIZE = 100;
+
+// Chat Configuration
+export const MAX_MESSAGE_LENGTH = 2000;
+export const CHAT_HISTORY_LIMIT = 50;
+
+// Offline Configuration
+export const OFFLINE_QUEUE_LIMIT = 100;
+export const OFFLINE_SYNC_INTERVAL = 30 * 1000; // 30 seconds
+
+// Feature Flags
+export const FEATURES = {
+  AI_RECOMMENDATIONS: true,
+  OFFLINE_MODE: true,
+  REAL_TIME_UPDATES: isProduction, // Only in production
+  ANALYTICS: isProduction,
+  CRASH_REPORTING: isProduction,
+};
+
+// Debug Configuration - ALWAYS false in production
+export const DEBUG = {
+  AUTH: isDevelopment,
+  API: isDevelopment,
+  STATE: isDevelopment,
+  PERFORMANCE: isDevelopment,
+};
+
+// Validation
+if (isProduction) {
+  // Verify production configuration
+  if (API_BASE_URL.includes("127.0.0.1") || API_BASE_URL.includes("localhost")) {
+    console.error(
+      "Production build using localhost API URL. Set EXPO_PUBLIC_API_URL environment variable."
+    );
+  }
+}
+
+// Log configuration on startup (development only)
+if (isDevelopment) {
+  console.log("📱 App Configuration:");
+  console.log(`   API URL: ${API_BASE_URL}`);
+  console.log(`   Platform: ${Platform.OS}`);
+  console.log(`   Version: ${APP_VERSION}`);
+}
