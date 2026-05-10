@@ -8,43 +8,43 @@
 // ─────────────────────────────────────────────────────────────
 
 export interface TravelDNA {
-  explorer: number;      // 0-100: How much they explore new places
-  luxury: number;        // 0-100: Preference for luxury experiences
-  budget: number;        // 0-100: Budget-conscious travel
-  foodie: number;        // 0-100: Food-focused travel
-  adventure: number;     // 0-100: Adventure activities
-  culture: number;       // 0-100: Cultural experiences
-  relax: number;         // 0-100: Relaxation-focused
-  social: number;        // 0-100: Group/social travel
-  planner: number;       // 0-100: How much they plan ahead
-  spontaneous: number;   // 0-100: Spontaneous travel
+  explorer: number; // 0-100: How much they explore new places
+  luxury: number; // 0-100: Preference for luxury experiences
+  budget: number; // 0-100: Budget-conscious travel
+  foodie: number; // 0-100: Food-focused travel
+  adventure: number; // 0-100: Adventure activities
+  culture: number; // 0-100: Cultural experiences
+  relax: number; // 0-100: Relaxation-focused
+  social: number; // 0-100: Group/social travel
+  planner: number; // 0-100: How much they plan ahead
+  spontaneous: number; // 0-100: Spontaneous travel
 }
 
 export interface TravelPersonality {
-  type: string;          // e.g., "The Cultural Explorer"
-  tagline: string;       // e.g., "You seek authentic local experiences"
-  icon: string;          // Emoji icon
-  color: string;         // Theme color
-  description: string;   // Full description
-  strengths: string[];   // Travel strengths
-  tips: string[];        // Personalized tips
+  type: string; // e.g., "The Cultural Explorer"
+  tagline: string; // e.g., "You seek authentic local experiences"
+  icon: string; // Emoji icon
+  color: string; // Theme color
+  description: string; // Full description
+  strengths: string[]; // Travel strengths
+  tips: string[]; // Personalized tips
 }
 
 // ─────────────────────────────────────────────────────────────
 // AI INSIGHTS
 // ─────────────────────────────────────────────────────────────
 
-export type InsightType = 
-  | 'achievement' 
-  | 'pattern' 
-  | 'prediction' 
-  | 'recommendation' 
-  | 'warning' 
-  | 'milestone'
-  | 'trend'
-  | 'tip';
+export type InsightType =
+  | "achievement"
+  | "pattern"
+  | "prediction"
+  | "recommendation"
+  | "warning"
+  | "milestone"
+  | "trend"
+  | "tip";
 
-export type InsightPriority = 'low' | 'medium' | 'high' | 'urgent';
+export type InsightPriority = "low" | "medium" | "high" | "urgent";
 
 export interface AIInsight {
   id: string;
@@ -54,11 +54,11 @@ export interface AIInsight {
   title: string;
   description: string;
   actionLabel?: string;
-  actionData?: Record<string, any>;
+  actionData?: Record<string, unknown>;
   createdAt: string;
   isRead: boolean;
   isDismissed: boolean;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -66,11 +66,11 @@ export interface AIInsight {
 // ─────────────────────────────────────────────────────────────
 
 export interface TravelPrediction {
-  type: 'next_trip' | 'budget' | 'destination' | 'frequency' | 'season';
-  confidence: number;    // 0-1
+  type: "next_trip" | "budget" | "destination" | "frequency" | "season";
+  confidence: number; // 0-1
   prediction: string;
   reasoning: string;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
   validUntil?: string;
 }
 
@@ -97,14 +97,14 @@ export interface NextTripPrediction {
 export interface BudgetPrediction {
   monthlyForecast: number;
   yearlyForecast: number;
-  overspendRisk: number;  // 0-1
+  overspendRisk: number; // 0-1
   savingsOpportunity: number;
   categoryForecasts: Record<string, number>;
   alerts: BudgetAlert[];
 }
 
 export interface BudgetAlert {
-  type: 'warning' | 'tip' | 'achievement';
+  type: "warning" | "tip" | "achievement";
   category: string;
   message: string;
   impact: number;
@@ -118,23 +118,23 @@ export interface SpendingCategory {
   name: string;
   amount: number;
   percentage: number;
-  trend: 'up' | 'down' | 'stable';
+  trend: "up" | "down" | "stable";
   trendValue: number;
   budget?: number;
-  status: 'under' | 'over' | 'on-track';
+  status: "under" | "over" | "on-track";
   insights: string[];
 }
 
 export interface FinancialHealth {
-  score: number;          // 0-100
-  grade: 'A' | 'B' | 'C' | 'D' | 'F';
-  status: 'excellent' | 'good' | 'fair' | 'needs-attention' | 'critical';
+  score: number; // 0-100
+  grade: "A" | "B" | "C" | "D" | "F";
+  status: "excellent" | "good" | "fair" | "needs-attention" | "critical";
   insights: AIInsight[];
   recommendations: string[];
   budgetUtilization: number;
   savingsRate: number;
   avgTripCost: number;
-  costTrend: number;      // Percentage change
+  costTrend: number; // Percentage change
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -145,8 +145,8 @@ export interface UserLevel {
   level: number;
   xp: number;
   xpToNext: number;
-  title: string;          // e.g., "Novice Explorer"
-  progress: number;       // 0-100
+  title: string; // e.g., "Novice Explorer"
+  progress: number; // 0-100
   benefits: string[];
   icon: string;
 }
@@ -154,7 +154,7 @@ export interface UserLevel {
 export interface TravelStreak {
   current: number;
   longest: number;
-  type: 'trips' | 'days' | 'journal' | 'planning';
+  type: "trips" | "days" | "journal" | "planning";
   lastActivity: string;
   isActive: boolean;
   nextMilestone: number;
@@ -166,10 +166,10 @@ export interface Badge {
   name: string;
   description: string;
   icon: string;
-  category: 'exploration' | 'social' | 'planning' | 'financial' | 'special';
-  rarity: 'common' | 'rare' | 'epic' | 'legendary';
+  category: "exploration" | "social" | "planning" | "financial" | "special";
+  rarity: "common" | "rare" | "epic" | "legendary";
   earnedAt?: string;
-  progress: number;       // 0-100
+  progress: number; // 0-100
   target: number;
   isUnlocked: boolean;
   xpReward: number;
@@ -177,7 +177,7 @@ export interface Badge {
 
 export interface Achievement {
   id: string;
-  type: 'milestone' | 'streak' | 'special' | 'hidden';
+  type: "milestone" | "streak" | "special" | "hidden";
   title: string;
   description: string;
   icon: string;
@@ -208,7 +208,7 @@ export interface TimeSeriesData {
 
 export interface HeatmapData {
   date: string;
-  intensity: number;      // 0-1
+  intensity: number; // 0-1
   count: number;
   label?: string;
 }
@@ -226,14 +226,14 @@ export interface RadialChartData {
 
 export interface TravelStory {
   id: string;
-  type: 'summary' | 'milestone' | 'trend' | 'comparison' | 'memory';
-  period: string;         // e.g., "2024", "This Month"
+  type: "summary" | "milestone" | "trend" | "comparison" | "memory";
+  period: string; // e.g., "2024", "This Month"
   title: string;
   narrative: string;
   highlights: string[];
   stats: Record<string, number>;
   icon: string;
-  shareableText: string;  // Pre-formatted for sharing
+  shareableText: string; // Pre-formatted for sharing
 }
 
 export interface YearInReview {
@@ -242,7 +242,7 @@ export interface YearInReview {
   totalDestinations: number;
   totalCountries: number;
   totalDays: number;
-  totalDistance: number;  // km
+  totalDistance: number; // km
   totalSpent: number;
   topDestinations: string[];
   topExperiences: string[];
@@ -250,7 +250,7 @@ export interface YearInReview {
   stories: TravelStory[];
   achievements: Achievement[];
   comparedToLastYear: {
-    trips: number;        // Percentage change
+    trips: number; // Percentage change
     spending: number;
     destinations: number;
   };
@@ -267,13 +267,13 @@ export interface EnhancedTravelStats {
     thisMonth: number;
     thisYear: number;
     lastYear: number;
-    trend: 'up' | 'down' | 'stable';
+    trend: "up" | "down" | "stable";
     trendValue: number;
     avgDuration: number;
     longestTrip: number;
     shortestTrip: number;
   };
-  
+
   destinations: {
     total: number;
     countries: number;
@@ -282,7 +282,7 @@ export interface EnhancedTravelStats {
     mostVisited: string;
     wishlist: number;
   };
-  
+
   spending: {
     total: number;
     thisMonth: number;
@@ -291,21 +291,21 @@ export interface EnhancedTravelStats {
     avgPerDay: number;
     currency: string;
   };
-  
+
   engagement: {
     photosUploaded: number;
     journalsWritten: number;
     placesSaved: number;
     tripsShared: number;
   };
-  
+
   time: {
     totalDays: number;
     avgTripLength: number;
     longestStreak: number;
     currentStreak: number;
   };
-  
+
   comparisons: {
     vsLastMonth: Record<string, number>;
     vsLastYear: Record<string, number>;
@@ -320,8 +320,8 @@ export interface EnhancedTravelStats {
 export interface AIAssistantQuery {
   id: string;
   query: string;
-  type: 'insight' | 'recommendation' | 'prediction' | 'comparison' | 'help';
-  context?: Record<string, any>;
+  type: "insight" | "recommendation" | "prediction" | "comparison" | "help";
+  context?: Record<string, unknown>;
 }
 
 export interface AIAssistantResponse {
@@ -330,7 +330,7 @@ export interface AIAssistantResponse {
   insights: AIInsight[];
   actions?: {
     label: string;
-    data: Record<string, any>;
+    data: Record<string, unknown>;
   }[];
   followUpQuestions: string[];
 }
@@ -344,32 +344,32 @@ export interface TravelIntelligenceState {
   stats: EnhancedTravelStats | null;
   dna: TravelDNA | null;
   personality: TravelPersonality | null;
-  
+
   // Insights
   insights: AIInsight[];
   predictions: TravelPrediction[];
-  
+
   // Financial
   financialHealth: FinancialHealth | null;
   spendingCategories: SpendingCategory[];
   budgetPrediction: BudgetPrediction | null;
-  
+
   // Gamification
   level: UserLevel | null;
   streaks: TravelStreak[];
   badges: Badge[];
   achievements: Achievement[];
-  
+
   // Stories
   stories: TravelStory[];
   yearInReview: YearInReview | null;
-  
+
   // UI State
   isLoading: boolean;
   isRefreshing: boolean;
   error: string | null;
   lastUpdated: string | null;
-  
+
   // Personalization
   preferences: {
     insightPriority: InsightPriority[];

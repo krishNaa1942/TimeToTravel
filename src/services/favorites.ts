@@ -1,13 +1,13 @@
 /**
  * Favorites / Wishlist Service
  * CRUD for bookmarked destinations and places
- * 
+ *
  * Handles unauthenticated state gracefully - returns empty/default
  * results instead of throwing errors for better UX
  */
 
 import apiService from "./api";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { tokenManager } from "./tokenManager";
 
 export interface Favorite {
   id: number;
@@ -28,7 +28,7 @@ export interface FavoriteCheckResult {
  */
 async function isAuthenticated(): Promise<boolean> {
   try {
-    const token = await AsyncStorage.getItem("authToken");
+    const token = await tokenManager.getValidToken();
     return !!token;
   } catch {
     return false;
@@ -40,7 +40,11 @@ async function isAuthenticated(): Promise<boolean> {
  */
 function handleAuthError(error: any, context: string): null {
   const status = error?.status || error?.response?.status;
-  if (status === 401 || error?.message?.includes('401') || error?.message?.includes('Authentication')) {
+  if (
+    status === 401 ||
+    error?.message?.includes("401") ||
+    error?.message?.includes("Authentication")
+  ) {
     console.log(`[Favorites] User not authenticated for ${context}`);
     return null;
   }
@@ -56,16 +60,18 @@ export const favoritesService = {
   async list(type?: string): Promise<Favorite[]> {
     // Check auth first to avoid unnecessary 401 calls
     if (!(await isAuthenticated())) {
-      console.log('[Favorites] User not authenticated, returning empty list');
+      console.log("[Favorites] User not authenticated, returning empty list");
       return [];
     }
-    
+
     try {
       const q = type ? `?type=${type}` : "";
-      const res = await apiService.get<{ favorites: Favorite[] }>(`/favorites${q}`);
+      const res = await apiService.get<{ favorites: Favorite[] }>(
+        `/favorites${q}`,
+      );
       return res.favorites || [];
     } catch (error: any) {
-      handleAuthError(error, 'list');
+      handleAuthError(error, "list");
       return [];
     }
   },
@@ -74,12 +80,16 @@ export const favoritesService = {
    * Add an item to favorites.
    * Returns null for unauthenticated users.
    */
-  async add(itemName: string, itemType: "destination" | "place" = "destination", notes?: string): Promise<Favorite | null> {
+  async add(
+    itemName: string,
+    itemType: "destination" | "place" = "destination",
+    notes?: string,
+  ): Promise<Favorite | null> {
     if (!(await isAuthenticated())) {
-      console.log('[Favorites] Cannot add favorite - user not authenticated');
+      console.log("[Favorites] Cannot add favorite - user not authenticated");
       return null;
     }
-    
+
     try {
       const res = await apiService.post<{ favorite: Favorite }>("/favorites", {
         item_name: itemName,
@@ -88,7 +98,7 @@ export const favoritesService = {
       });
       return res.favorite;
     } catch (error: any) {
-      return handleAuthError(error, 'add');
+      return handleAuthError(error, "add");
     }
   },
 
@@ -98,15 +108,17 @@ export const favoritesService = {
    */
   async remove(favId: number): Promise<boolean> {
     if (!(await isAuthenticated())) {
-      console.log('[Favorites] Cannot remove favorite - user not authenticated');
+      console.log(
+        "[Favorites] Cannot remove favorite - user not authenticated",
+      );
       return false;
     }
-    
+
     try {
       await apiService.delete(`/favorites/${favId}`);
       return true;
     } catch (error: any) {
-      handleAuthError(error, 'remove');
+      handleAuthError(error, "remove");
       return false;
     }
   },
@@ -115,16 +127,21 @@ export const favoritesService = {
    * Toggle favorite status.
    * Returns the new favorite state or null if operation failed.
    */
-  async toggle(itemName: string, itemType: "destination" | "place" = "destination"): Promise<{ isFavorite: boolean; favorite: Favorite | null }> {
+  async toggle(
+    itemName: string,
+    itemType: "destination" | "place" = "destination",
+  ): Promise<{ isFavorite: boolean; favorite: Favorite | null }> {
     if (!(await isAuthenticated())) {
-      console.log('[Favorites] Cannot toggle favorite - user not authenticated');
+      console.log(
+        "[Favorites] Cannot toggle favorite - user not authenticated",
+      );
       return { isFavorite: false, favorite: null };
     }
-    
+
     try {
       // First check current state
       const checkResult = await this.check(itemName, itemType);
-      
+
       if (checkResult.is_favorite && checkResult.favorite) {
         // Remove from favorites
         const removed = await this.remove(checkResult.favorite.id);
@@ -135,7 +152,7 @@ export const favoritesService = {
         return { isFavorite: !!favorite, favorite };
       }
     } catch (error: any) {
-      handleAuthError(error, 'toggle');
+      handleAuthError(error, "toggle");
       return { isFavorite: false, favorite: null };
     }
   },
@@ -144,16 +161,24 @@ export const favoritesService = {
    * Check if an item is favorited.
    * Returns default result for unauthenticated users.
    */
-  async check(itemName: string, itemType: string = "destination"): Promise<FavoriteCheckResult> {
+  async check(
+    itemName: string,
+    itemType: string = "destination",
+  ): Promise<FavoriteCheckResult> {
     if (!(await isAuthenticated())) {
       return { is_favorite: false, favorite: null };
     }
-    
-    const params = new URLSearchParams({ item_name: itemName, item_type: itemType });
+
+    const params = new URLSearchParams({
+      item_name: itemName,
+      item_type: itemType,
+    });
     try {
-      return await apiService.get<FavoriteCheckResult>(`/favorites/check?${params}`);
+      return await apiService.get<FavoriteCheckResult>(
+        `/favorites/check?${params}`,
+      );
     } catch (error: any) {
-      handleAuthError(error, 'check');
+      handleAuthError(error, "check");
       return { is_favorite: false, favorite: null };
     }
   },

@@ -7,8 +7,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Alert } from "react-native";
 import tokenManager from "@/services/tokenManager";
 import apiService from "@/services/api";
+import { authServiceV2 } from "@/services/authV2";
 import { queryKeys } from "@/api/queryClient";
 import { useAuthStore, User } from "@/stores/authStore";
+import { requestPasswordReset } from "@/features/auth/services/socialAuthService";
 
 // Types
 interface LoginCredentials {
@@ -42,10 +44,12 @@ export function useLogin() {
   const setUser = useAuthStore((state) => state.setUser);
 
   return useMutation({
-    mutationFn: async (credentials: LoginCredentials): Promise<AuthResponse> => {
+    mutationFn: async (
+      credentials: LoginCredentials,
+    ): Promise<AuthResponse> => {
       const response = await apiService.post<AuthResponse>(
         "/auth/login",
-        credentials
+        credentials,
       );
       return response;
     },
@@ -55,7 +59,7 @@ export function useLogin() {
         await tokenManager.storeTokens(
           data.access_token,
           data.refresh_token,
-          data.expires_in
+          data.expires_in,
         );
       }
 
@@ -90,7 +94,7 @@ export function useRegister() {
     mutationFn: async (data: RegisterData): Promise<AuthResponse> => {
       const response = await apiService.post<AuthResponse>(
         "/auth/register",
-        data
+        data,
       );
       return response;
     },
@@ -100,7 +104,7 @@ export function useRegister() {
         await tokenManager.storeTokens(
           data.access_token,
           data.refresh_token,
-          data.expires_in
+          data.expires_in,
         );
       }
 
@@ -140,10 +144,10 @@ export function useLogout() {
     onSuccess: async () => {
       // Clear tokens from secure storage
       await tokenManager.clearTokens();
-      
+
       // Clear user from store
       clearUser();
-      
+
       // Clear all cached queries
       queryClient.clear();
     },
@@ -160,35 +164,13 @@ export function useSession() {
   return useQuery({
     queryKey: queryKeys.auth.session,
     queryFn: async (): Promise<User | null> => {
-      // Check if we have a valid token
-      const hasToken = await tokenManager.isAuthenticated();
-      
-      if (!hasToken) {
-        return null;
-      }
-
       // If we already have user in store, return it
       if (user) {
         return user;
       }
 
-      // Otherwise fetch from server
-      try {
-        const response = await apiService.get<User>("/auth/me");
-        return response;
-      } catch (error) {
-        // Token might be expired, try refresh
-        const newToken = await tokenManager.refreshAccessToken();
-        if (newToken) {
-          try {
-            const response = await apiService.get<User>("/auth/me");
-            return response;
-          } catch (retryError) {
-            return null;
-          }
-        }
-        return null;
-      }
+      // Otherwise verify through the shared JWT auth flow
+      return authServiceV2.checkAuth();
     },
     enabled: isAuthenticated,
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -210,11 +192,11 @@ export function useIsAuthenticated() {
  */
 export function useAuthGuard() {
   const storeAuth = useAuthStore((state) => state.isAuthenticated);
-  
+
   return useQuery({
     queryKey: ["auth", "guard"],
     queryFn: async () => {
-      return tokenManager.isAuthenticated();
+      return !!(await tokenManager.getValidToken());
     },
     enabled: storeAuth,
     staleTime: 60 * 1000, // 1 minute
@@ -227,16 +209,12 @@ export function useAuthGuard() {
 export function usePasswordReset() {
   return useMutation({
     mutationFn: async (email: string) => {
-      const response = await apiService.post<{ message: string }>(
-        "/auth/forgot-password",
-        { email }
-      );
-      return response;
+      return requestPasswordReset(email);
     },
     onSuccess: (data) => {
       Alert.alert(
         "Password Reset",
-        "If an account with that email exists, you'll receive a password reset link."
+        "If an account with that email exists, you'll receive a password reset link.",
       );
     },
   });
@@ -247,20 +225,15 @@ export function usePasswordReset() {
  */
 export function useUpdateProfile() {
   const queryClient = useQueryClient();
-  const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
 
   return useMutation({
     mutationFn: async (updates: Partial<User>) => {
-      const response = await apiService.put<User>("/auth/profile", updates);
-      return response;
+      return authServiceV2.updateProfile(updates);
     },
     onSuccess: (updatedUser) => {
       // Update store
-      setUser({
-        ...user,
-        ...updatedUser,
-      });
+      setUser(updatedUser);
 
       // Invalidate user queries
       queryClient.invalidateQueries({ queryKey: queryKeys.auth.user });

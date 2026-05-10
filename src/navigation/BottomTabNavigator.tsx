@@ -13,11 +13,21 @@ import React, {
   ReactNode,
   Suspense,
   lazy,
+  useEffect,
   useCallback,
   useMemo,
 } from "react";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import {
+  ActivityIndicator,
+  InteractionManager,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import {
+  createBottomTabNavigator,
+  type BottomTabNavigationOptions,
+} from "@react-navigation/bottom-tabs";
 import { useTheme } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
@@ -34,16 +44,22 @@ import {
   TabRouteName,
   UserRole,
   getAccessibilityLabel,
-  getTabByName,
+  getVisibleTabs,
   hasTabPermission,
 } from "./config/tabConfig";
 import AnimatedTabIcon from "./components/AnimatedTabIcon";
 
-const HomeStack = lazy(() => import("./stacks/HomeStack"));
-const ExploreStack = lazy(() => import("./stacks/ExploreStack"));
-const ChatStack = lazy(() => import("./stacks/ChatStack"));
-const TripsStack = lazy(() => import("./stacks/TripStack"));
-const ProfileStack = lazy(() => import("./stacks/ProfileStack"));
+const loadHomeStack = () => import("./stacks/HomeStack");
+const loadExploreStack = () => import("./stacks/ExploreStack");
+const loadChatStack = () => import("./stacks/ChatStack");
+const loadTripsStack = () => import("./stacks/TripStack");
+const loadProfileStack = () => import("./stacks/ProfileStack");
+
+const HomeStack = lazy(loadHomeStack);
+const ExploreStack = lazy(loadExploreStack);
+const ChatStack = lazy(loadChatStack);
+const TripsStack = lazy(loadTripsStack);
+const ProfileStack = lazy(loadProfileStack);
 
 export type BottomTabParamList = {
   Home: undefined;
@@ -123,6 +139,14 @@ const TAB_STACK_SCREENS: Record<TabRouteName, React.ComponentType> = {
   Chat: ProtectedStackScreen(ChatStack, "Chat"),
   Trips: ProtectedStackScreen(TripsStack, "Trips"),
   Profile: ProtectedStackScreen(ProfileStack, "Profile"),
+};
+
+const TAB_STACK_LOADERS: Record<TabRouteName, () => Promise<unknown>> = {
+  Home: loadHomeStack,
+  Explore: loadExploreStack,
+  Chat: loadChatStack,
+  Trips: loadTripsStack,
+  Profile: loadProfileStack,
 };
 
 const RestrictedAccessScreen: React.FC<{
@@ -207,7 +231,15 @@ const BottomTabNavigator: React.FC<BottomTabNavigatorProps> = ({
   const analytics = useMemo(() => getAnalytics(), []);
 
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const userPreferences = useAuthStore((state) => state.user?.preferences);
+  const rolePreference = useAuthStore(
+    (state) => state.user?.preferences?.role as string | undefined,
+  );
+  const tierPreference = useAuthStore(
+    (state) => state.user?.preferences?.tier as string | undefined,
+  );
+  const planPreference = useAuthStore(
+    (state) => state.user?.preferences?.plan as string | undefined,
+  );
 
   const pendingTripsCount = useTripsStore(
     (state) => state.upcomingTrips.length,
@@ -217,8 +249,13 @@ const BottomTabNavigator: React.FC<BottomTabNavigatorProps> = ({
   );
 
   const userRole = useMemo(
-    () => resolveUserRole(isAuthenticated, userPreferences),
-    [isAuthenticated, userPreferences],
+    () =>
+      resolveUserRole(isAuthenticated, {
+        role: rolePreference,
+        tier: tierPreference,
+        plan: planPreference,
+      }),
+    [isAuthenticated, planPreference, rolePreference, tierPreference],
   );
 
   const badgeCounts = useMemo<TabBadgeCounts>(
@@ -229,97 +266,156 @@ const BottomTabNavigator: React.FC<BottomTabNavigatorProps> = ({
     [pendingTripsCount, unreadMessagesCount],
   );
 
-  const visibleTabs = useMemo(
-    () =>
-      TAB_CONFIGS.filter((tab) => {
-        if (!tab.permissions.hideIfUnauthorized) {
-          return true;
-        }
+  const visibleTabs = useMemo(() => getVisibleTabs(userRole), [userRole]);
 
-        return hasTabPermission(tab, userRole);
-      }).map((tab) => ({
-        ...tab,
-        isAuthorized: hasTabPermission(tab, userRole),
-        badgeCount: tab.badge?.enabled ? badgeCounts[tab.badge.storeKey] : 0,
-      })),
-    [badgeCounts, userRole],
+  const tabBarStyle = useMemo(
+    () => [
+      styles.tabBar,
+      {
+        backgroundColor: theme.colors.card,
+        borderTopColor: theme.colors.border,
+        height: 60 + insets.bottom,
+        paddingBottom: insets.bottom > 0 ? insets.bottom : 8,
+      },
+    ],
+    [insets.bottom, theme.colors.border, theme.colors.card],
+  );
+
+  const navigatorScreenOptions = useMemo(
+    () => ({
+      headerShown: false,
+      lazy: true,
+      freezeOnBlur: true,
+      tabBarHideOnKeyboard: true,
+      tabBarShowLabel: false,
+      tabBarStyle,
+      tabBarItemStyle: styles.tabBarItem,
+    }),
+    [tabBarStyle],
+  );
+
+  const tabScreenOptions = useMemo<
+    Record<TabRouteName, BottomTabNavigationOptions>
+  >(
+    () =>
+      TAB_CONFIGS.reduce(
+        (acc, tab) => {
+          const badgeCount = tab.badge?.enabled
+            ? badgeCounts[tab.badge.storeKey]
+            : 0;
+
+          acc[tab.name] = {
+            tabBarIcon: ({ focused }) => (
+              <AnimatedTabIcon
+                tab={tab}
+                focused={focused}
+                badgeCount={badgeCount}
+              />
+            ),
+            tabBarAccessibilityLabel: getAccessibilityLabel(tab, false),
+            tabBarButtonTestID: `tab-${tab.name.toLowerCase()}`,
+          };
+
+          return acc;
+        },
+        {} as Record<TabRouteName, BottomTabNavigationOptions>,
+      ),
+    [badgeCounts],
   );
 
   const trackTabOpen = useCallback(
     (tabName: TabRouteName) => {
-      const tab = getTabByName(tabName);
+      const tab = TAB_CONFIG_BY_ROUTE[tabName];
       if (!tab) {
         return;
       }
 
-      analytics.trackScreenView(`${tabName}Tab`);
-      analytics.trackEvent(tab.analytics.eventName, {
-        ...tab.analytics.properties,
-        tab: tabName,
-        role: userRole,
-        authenticated: isAuthenticated,
-      });
-
-      useUserBehaviorStore.getState().trackEvent({
-        type: "view",
-        category: "navigation",
-        metadata: {
+      InteractionManager.runAfterInteractions(() => {
+        analytics.trackScreenView(`${tabName}Tab`);
+        analytics.trackEvent(tab.analytics.eventName, {
+          ...tab.analytics.properties,
           tab: tabName,
           role: userRole,
-        },
+          authenticated: isAuthenticated,
+        });
+
+        useUserBehaviorStore.getState().trackEvent({
+          type: "view",
+          category: "navigation",
+          metadata: {
+            tab: tabName,
+            role: userRole,
+          },
+        });
       });
     },
     [analytics, isAuthenticated, userRole],
   );
 
   const handleTabPress = useCallback(
-    (tabName: TabRouteName, isAuthorized: boolean, requiredRole: UserRole) => {
+    (tab: TabConfig, event: { preventDefault: () => void }) => {
+      const isAuthorized = hasTabPermission(tab, userRole);
+
       if (!isAuthorized) {
+        event.preventDefault();
+
         void Haptics.notificationAsync(
           Haptics.NotificationFeedbackType.Warning,
         );
 
-        analytics.trackEvent("tab_access_denied", {
-          tab: tabName,
-          requiredRole,
-          userRole,
-          authenticated: isAuthenticated,
+        InteractionManager.runAfterInteractions(() => {
+          analytics.trackEvent("tab_access_denied", {
+            tab: tab.name,
+            requiredRole: tab.permissions.minRole,
+            userRole,
+            authenticated: isAuthenticated,
+          });
         });
 
         return;
       }
 
       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      trackTabOpen(tabName);
-      onTabPress?.(tabName);
+      trackTabOpen(tab.name);
+      onTabPress?.(tab.name);
     },
     [analytics, isAuthenticated, onTabPress, trackTabOpen, userRole],
   );
 
+  const screenListeners = useCallback(
+    ({ route }: { route: { name: string } }) => ({
+      tabPress: (event: { preventDefault: () => void }) => {
+        const tab = TAB_CONFIG_BY_ROUTE[route.name as TabRouteName];
+        if (tab) {
+          handleTabPress(tab, event);
+        }
+      },
+    }),
+    [handleTabPress],
+  );
+
+  useEffect(() => {
+    const preloadTask = InteractionManager.runAfterInteractions(() => {
+      void Promise.allSettled(
+        TAB_CONFIGS.map((tab) => TAB_STACK_LOADERS[tab.name]()),
+      );
+    });
+
+    return () => {
+      preloadTask.cancel();
+    };
+  }, []);
+
   return (
     <Tab.Navigator
       initialRouteName="Home"
-      detachInactiveScreens
-      screenOptions={{
-        headerShown: false,
-        lazy: true,
-        freezeOnBlur: true,
-        tabBarHideOnKeyboard: true,
-        tabBarShowLabel: false,
-        tabBarStyle: [
-          styles.tabBar,
-          {
-            backgroundColor: theme.colors.card,
-            borderTopColor: theme.colors.border,
-            height: 60 + insets.bottom,
-            paddingBottom: insets.bottom > 0 ? insets.bottom : 8,
-          },
-        ],
-        tabBarItemStyle: styles.tabBarItem,
-      }}
+      detachInactiveScreens={false}
+      screenOptions={navigatorScreenOptions}
+      screenListeners={screenListeners}
     >
       {visibleTabs.map((tab) => {
-        const component = tab.isAuthorized
+        const isAuthorized = hasTabPermission(tab, userRole);
+        const component = isAuthorized
           ? TAB_STACK_SCREENS[tab.name]
           : RESTRICTED_TAB_SCREENS[tab.name];
 
@@ -328,30 +424,7 @@ const BottomTabNavigator: React.FC<BottomTabNavigatorProps> = ({
             key={tab.name}
             name={tab.name}
             component={component}
-            options={{
-              tabBarIcon: ({ focused }) => (
-                <AnimatedTabIcon
-                  tab={tab}
-                  focused={focused}
-                  badgeCount={tab.badgeCount}
-                />
-              ),
-              tabBarAccessibilityLabel: getAccessibilityLabel(tab, false),
-              tabBarButtonTestID: `tab-${tab.name.toLowerCase()}`,
-            }}
-            listeners={{
-              tabPress: (event) => {
-                if (!tab.isAuthorized) {
-                  event.preventDefault();
-                }
-
-                handleTabPress(
-                  tab.name,
-                  tab.isAuthorized,
-                  tab.permissions.minRole,
-                );
-              },
-            }}
+            options={tabScreenOptions[tab.name]}
           />
         );
       })}

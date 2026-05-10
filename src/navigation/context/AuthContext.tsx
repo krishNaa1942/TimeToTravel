@@ -3,15 +3,27 @@
  * Provides auth state and actions to navigation system
  */
 
-import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
-import { useAuthStore, User } from '@/stores/authStore';
-import { tokenManager } from '@/services/tokenManager';
-import { authServiceV2 } from '@/services/authV2';
-import { ApiError } from '@/services/apiClient';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+  useMemo,
+} from "react";
+import { useAuthStore, User } from "@/stores/authStore";
+import { tokenManager } from "@/services/tokenManager";
+import { authServiceV2 } from "@/services/authV2";
+import { ApiError } from "@/services/apiClient";
 
 // ── Types ────────────────────────────────────────────────────────
-export type AuthStatus = 'idle' | 'loading' | 'authenticated' | 'unauthenticated' | 'error';
-export type UserRole = 'free' | 'premium' | 'admin';
+export type AuthStatus =
+  | "idle"
+  | "loading"
+  | "authenticated"
+  | "unauthenticated"
+  | "error";
+export type UserRole = "free" | "premium" | "admin";
 
 export interface AuthState {
   status: AuthStatus;
@@ -50,17 +62,20 @@ const TOKEN_REFRESH_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes before expiry
 const AUTH_CHECK_INTERVAL_MS = 60 * 1000; // Check every minute
 
 // ── Auth Provider Component ───────────────────────────────────────
-export function AuthProvider({ children, onAuthStateChange }: AuthProviderProps) {
+export function AuthProvider({
+  children,
+  onAuthStateChange,
+}: AuthProviderProps) {
   const store = useAuthStore();
-  const [status, setStatus] = useState<AuthStatus>('idle');
+  const [status, setStatus] = useState<AuthStatus>("idle");
   const [isOnboarded, setIsOnboarded] = useState(false);
-  const [userRole, setUserRole] = useState<UserRole>('free');
+  const [userRole, setUserRole] = useState<UserRole>("free");
   const [tokenExpiringSoon, setTokenExpiringSoon] = useState(false);
   const [initialized, setInitialized] = useState(false);
 
   // Compute derived state
-  const isAuthenticated = status === 'authenticated';
-  const isLoading = status === 'loading' || status === 'idle';
+  const isAuthenticated = status === "authenticated";
+  const isLoading = status === "loading" || status === "idle";
 
   // Sync with store
   useEffect(() => {
@@ -76,63 +91,51 @@ export function AuthProvider({ children, onAuthStateChange }: AuthProviderProps)
         tokenExpiringSoon,
       });
     }
-  }, [status, isAuthenticated, isLoading, isOnboarded, store.user, userRole, store.error, tokenExpiringSoon]);
+  }, [
+    status,
+    isAuthenticated,
+    isLoading,
+    isOnboarded,
+    store.user,
+    userRole,
+    store.error,
+    tokenExpiringSoon,
+  ]);
 
   // Initialize auth state on mount
   useEffect(() => {
     if (initialized) return;
 
     const initializeAuth = async () => {
-      console.log('🔐 Initializing auth state...');
-      setStatus('loading');
+      console.log("🔐 Initializing auth state...");
+      setStatus("loading");
 
       try {
-        // Check if we have valid tokens
-        const hasValidToken = await tokenManager.isAuthenticated();
-        
-        if (!hasValidToken) {
-          console.log('🔐 No valid tokens found');
-          setStatus('unauthenticated');
-          store.clearUser();
-          setInitialized(true);
-          return;
-        }
-
-        // Get a valid token (will refresh if needed)
-        const token = await tokenManager.getValidToken();
-        
-        if (!token) {
-          console.log('🔐 Failed to get valid token');
-          setStatus('unauthenticated');
-          store.clearUser();
-          setInitialized(true);
-          return;
-        }
-
-        // Verify session with server
         const user = await authServiceV2.checkAuth();
-        
+
         if (user) {
-          console.log('🔐 Session verified for user:', user.email);
+          console.log("🔐 Session verified for user:", user.email);
           store.setUser(user);
-          setStatus('authenticated');
-          
+          setStatus("authenticated");
+
           // Determine user role from user data
-          const role = (user as any).role || 'free';
+          const role = (user as any).role || "free";
           setUserRole(role);
-          
+
           // Check onboarding status
           const onboarded = (user as any).preferences?.onboarded ?? false;
           setIsOnboarded(onboarded);
         } else {
-          console.log('🔐 Session verification failed');
-          setStatus('unauthenticated');
+          console.log("🔐 Session verification failed");
+          setStatus("unauthenticated");
           store.clearUser();
         }
       } catch (error) {
-        console.error('🔐 Auth initialization error:', error);
-        setStatus('error');
-        store.setError(error instanceof Error ? error.message : 'Authentication failed');
+        console.error("🔐 Auth initialization error:", error);
+        setStatus("error");
+        store.setError(
+          error instanceof Error ? error.message : "Authentication failed",
+        );
       } finally {
         setInitialized(true);
       }
@@ -153,7 +156,7 @@ export function AuthProvider({ children, onAuthStateChange }: AuthProviderProps)
       setTokenExpiringSoon(isExpired);
 
       if (isExpired) {
-        console.log('🔐 Token expiring soon, refreshing...');
+        console.log("🔐 Token expiring soon, refreshing...");
         await refreshSession();
       }
     };
@@ -167,92 +170,97 @@ export function AuthProvider({ children, onAuthStateChange }: AuthProviderProps)
   // ── Actions ──────────────────────────────────────────────────────
 
   const login = useCallback(async (email: string, password: string) => {
-    console.log('🔐 Logging in:', email);
-    setStatus('loading');
+    console.log("🔐 Logging in:", email);
+    setStatus("loading");
     store.setError(null);
 
     try {
       const user = await authServiceV2.login({ email, password });
       store.setUser(user);
-      setStatus('authenticated');
-      
-      const role = (user as any).role || 'free';
+      setStatus("authenticated");
+
+      const role = (user as any).role || "free";
       setUserRole(role);
-      
+
       const onboarded = (user as any).preferences?.onboarded ?? false;
       setIsOnboarded(onboarded);
-      
-      console.log('🔐 Login successful');
+
+      console.log("🔐 Login successful");
     } catch (error) {
-      const message = error instanceof ApiError ? error.userMessage : 'Login failed';
+      const message =
+        error instanceof ApiError ? error.userMessage : "Login failed";
       store.setError(message);
-      setStatus('unauthenticated');
+      setStatus("unauthenticated");
       throw error;
     }
   }, []);
 
-  const register = useCallback(async (name: string, email: string, password: string) => {
-    console.log('🔐 Registering:', email);
-    setStatus('loading');
-    store.setError(null);
+  const register = useCallback(
+    async (name: string, email: string, password: string) => {
+      console.log("🔐 Registering:", email);
+      setStatus("loading");
+      store.setError(null);
 
-    try {
-      const user = await authServiceV2.register({ name, email, password });
-      store.setUser(user);
-      setStatus('authenticated');
-      setUserRole('free');
-      setIsOnboarded(false);
-      
-      console.log('🔐 Registration successful');
-    } catch (error) {
-      const message = error instanceof ApiError ? error.userMessage : 'Registration failed';
-      store.setError(message);
-      setStatus('unauthenticated');
-      throw error;
-    }
-  }, []);
+      try {
+        const user = await authServiceV2.register({ name, email, password });
+        store.setUser(user);
+        setStatus("authenticated");
+        setUserRole("free");
+        setIsOnboarded(false);
+
+        console.log("🔐 Registration successful");
+      } catch (error) {
+        const message =
+          error instanceof ApiError ? error.userMessage : "Registration failed";
+        store.setError(message);
+        setStatus("unauthenticated");
+        throw error;
+      }
+    },
+    [],
+  );
 
   const logout = useCallback(async (logoutAllDevices: boolean = false) => {
-    console.log('🔐 Logging out...');
-    setStatus('loading');
+    console.log("🔐 Logging out...");
+    setStatus("loading");
 
     try {
       await authServiceV2.logout(logoutAllDevices);
     } catch (error) {
-      console.error('🔐 Logout error:', error);
+      console.error("🔐 Logout error:", error);
     } finally {
       store.clearUser();
-      setStatus('unauthenticated');
-      setUserRole('free');
+      setStatus("unauthenticated");
+      setUserRole("free");
       setIsOnboarded(false);
       setTokenExpiringSoon(false);
-      console.log('🔐 Logout complete');
+      console.log("🔐 Logout complete");
     }
   }, []);
 
   const refreshSession = useCallback(async () => {
-    console.log('🔐 Refreshing session...');
-    
+    console.log("🔐 Refreshing session...");
+
     try {
       const newToken = await tokenManager.refreshAccessToken();
-      
+
       if (newToken) {
-        console.log('🔐 Session refreshed');
+        console.log("🔐 Session refreshed");
         setTokenExpiringSoon(false);
-        
+
         // Re-verify user
         const user = await authServiceV2.checkAuth();
         if (user) {
           store.setUser(user);
         }
       } else {
-        console.log('🔐 Session refresh failed, logging out');
-        setStatus('unauthenticated');
+        console.log("🔐 Session refresh failed, logging out");
+        setStatus("unauthenticated");
         store.clearUser();
       }
     } catch (error) {
-      console.error('🔐 Session refresh error:', error);
-      setStatus('unauthenticated');
+      console.error("🔐 Session refresh error:", error);
+      setStatus("unauthenticated");
       store.clearUser();
     }
   }, []);
@@ -262,20 +270,20 @@ export function AuthProvider({ children, onAuthStateChange }: AuthProviderProps)
   }, []);
 
   const checkAuthStatus = useCallback(async () => {
-    if (status !== 'authenticated') return;
+    if (status !== "authenticated") return;
 
     try {
       const user = await authServiceV2.checkAuth();
       if (user) {
         store.setUser(user);
-        const role = (user as any).role || 'free';
+        const role = (user as any).role || "free";
         setUserRole(role);
       } else {
-        setStatus('unauthenticated');
+        setStatus("unauthenticated");
         store.clearUser();
       }
     } catch (error) {
-      console.error('🔐 Auth check error:', error);
+      console.error("🔐 Auth check error:", error);
     }
   }, [status]);
 
@@ -284,82 +292,84 @@ export function AuthProvider({ children, onAuthStateChange }: AuthProviderProps)
   }, []);
 
   // ── Context Value ────────────────────────────────────────────────
-  const value = useMemo<AuthContextValue>(() => ({
-    // State
-    status,
-    isAuthenticated,
-    isLoading,
-    isOnboarded,
-    user: store.user,
-    userRole,
-    error: store.error,
-    tokenExpiringSoon,
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      // State
+      status,
+      isAuthenticated,
+      isLoading,
+      isOnboarded,
+      user: store.user,
+      userRole,
+      error: store.error,
+      tokenExpiringSoon,
 
-    // Actions
-    login,
-    register,
-    logout,
-    refreshSession,
-    clearError,
-    checkAuthStatus,
-    updateUser,
-  }), [
-    status,
-    isAuthenticated,
-    isLoading,
-    isOnboarded,
-    store.user,
-    userRole,
-    store.error,
-    tokenExpiringSoon,
-    login,
-    register,
-    logout,
-    refreshSession,
-    clearError,
-    checkAuthStatus,
-    updateUser,
-  ]);
-
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
+      // Actions
+      login,
+      register,
+      logout,
+      refreshSession,
+      clearError,
+      checkAuthStatus,
+      updateUser,
+    }),
+    [
+      status,
+      isAuthenticated,
+      isLoading,
+      isOnboarded,
+      store.user,
+      userRole,
+      store.error,
+      tokenExpiringSoon,
+      login,
+      register,
+      logout,
+      refreshSession,
+      clearError,
+      checkAuthStatus,
+      updateUser,
+    ],
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 // ── Hook ──────────────────────────────────────────────────────────
 export function useAuthContext(): AuthContextValue {
   const context = useContext(AuthContext);
-  
+
   if (!context) {
-    throw new Error('useAuthContext must be used within an AuthProvider');
+    throw new Error("useAuthContext must be used within an AuthProvider");
   }
-  
+
   return context;
 }
 
 // ── Hook for just auth status (lighter weight) ────────────────────
-export function useAuthStatus(): Pick<AuthState, 'status' | 'isAuthenticated' | 'isLoading'> {
+export function useAuthStatus(): Pick<
+  AuthState,
+  "status" | "isAuthenticated" | "isLoading"
+> {
   const { status, isAuthenticated, isLoading } = useAuthContext();
   return { status, isAuthenticated, isLoading };
 }
 
 // ── HOC for components that need auth ─────────────────────────────
 export function withAuth<P extends object>(
-  Component: React.ComponentType<P>
+  Component: React.ComponentType<P>,
 ): React.FC<P> {
   return function WithAuthComponent(props: P) {
     const { isAuthenticated, isLoading } = useAuthContext();
-    
+
     if (isLoading) {
       return null; // Or a loading spinner
     }
-    
+
     if (!isAuthenticated) {
       return null; // Will be redirected by navigation
     }
-    
+
     return <Component {...props} />;
   };
 }

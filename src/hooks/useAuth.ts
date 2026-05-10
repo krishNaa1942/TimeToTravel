@@ -27,7 +27,16 @@ export interface UseAuthReturn {
 }
 
 export function useAuth(): UseAuthReturn {
-  const { user, isAuthenticated, setUser, clearUser, setLoading, setError, isLoading, error } = useAuthStore();
+  const {
+    user,
+    isAuthenticated,
+    setUser,
+    clearUser,
+    setLoading,
+    setError,
+    isLoading,
+    error,
+  } = useAuthStore();
   const [initialized, setInitialized] = useState(false);
 
   // Initialize auth state on mount
@@ -38,16 +47,9 @@ export function useAuth(): UseAuthReturn {
       setLoading(true);
 
       try {
-        await tokenManager.loadTokensFromStorage();
-
-        if (tokenManager.isAuthenticated()) {
-          // Verify with server
-          const verifiedUser = await authServiceV2.checkAuth();
-          if (verifiedUser) {
-            setUser(verifiedUser);
-          } else {
-            clearUser();
-          }
+        const verifiedUser = await authServiceV2.checkAuth();
+        if (verifiedUser) {
+          setUser(verifiedUser);
         } else {
           clearUser();
         }
@@ -80,7 +82,8 @@ export function useAuth(): UseAuthReturn {
       const loggedInUser = await authServiceV2.login({ email, password });
       setUser(loggedInUser);
     } catch (err) {
-      const message = err instanceof ApiError ? err.userMessage : "Login failed";
+      const message =
+        err instanceof ApiError ? err.userMessage : "Login failed";
       setError(message);
       throw err;
     } finally {
@@ -88,21 +91,25 @@ export function useAuth(): UseAuthReturn {
     }
   }, []);
 
-  const register = useCallback(async (name: string, email: string, password: string) => {
-    setLoading(true);
-    setError(null);
+  const register = useCallback(
+    async (name: string, email: string, password: string) => {
+      setLoading(true);
+      setError(null);
 
-    try {
-      const newUser = await authServiceV2.register({ name, email, password });
-      setUser(newUser);
-    } catch (err) {
-      const message = err instanceof ApiError ? err.userMessage : "Registration failed";
-      setError(message);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      try {
+        const newUser = await authServiceV2.register({ name, email, password });
+        setUser(newUser);
+      } catch (err) {
+        const message =
+          err instanceof ApiError ? err.userMessage : "Registration failed";
+        setError(message);
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [],
+  );
 
   const logout = useCallback(async (logoutAllDevices: boolean = false) => {
     setLoading(true);
@@ -139,21 +146,27 @@ export function useAuth(): UseAuthReturn {
     setError(null);
   }, []);
 
-  const updateProfile = useCallback(async (data: { name?: string; email?: string }) => {
-    setLoading(true);
-    setError(null);
+  const updateProfile = useCallback(
+    async (data: { name?: string; email?: string }) => {
+      setLoading(true);
+      setError(null);
 
-    try {
-      const updatedUser = await authServiceV2.updateProfile(data);
-      setUser(updatedUser);
-    } catch (err) {
-      const message = err instanceof ApiError ? err.userMessage : "Failed to update profile";
-      setError(message);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      try {
+        const updatedUser = await authServiceV2.updateProfile(data);
+        setUser(updatedUser);
+      } catch (err) {
+        const message =
+          err instanceof ApiError
+            ? err.userMessage
+            : "Failed to update profile";
+        setError(message);
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [],
+  );
 
   return {
     user,

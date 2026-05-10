@@ -25,6 +25,7 @@ import {
   StyleSheet,
 } from "react-native";
 import { useAuthStore } from "@/stores/authStore";
+import { useDebouncedCallback } from "@/hooks/useDebounce";
 import { getTabDeepLinkScreens } from "../config/tabConfig";
 
 // Import screens
@@ -322,6 +323,9 @@ export const NavOS: React.FC = () => {
 
   const [isReady, setIsReady] = useState(false);
   const [initialState, setInitialState] = useState<any>(null);
+  const persistNavigationStateTimeoutRef = React.useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
 
   // Load persisted navigation state
   const loadNavigationState = useCallback(async () => {
@@ -367,26 +371,39 @@ export const NavOS: React.FC = () => {
     return undefined;
   }, [loadAuthState, loadNavigationState]);
 
-  // Handle navigation state change
-  const onStateChange = useCallback(
-    async (state: any) => {
-      try {
-        if (isAuthenticated && state) {
-          await AsyncStorage.setItem(
-            NAV_STATE_KEY,
-            JSON.stringify({
-              version: NAV_VERSION,
-              timestamp: Date.now(),
-              state,
-            }),
-          );
-        }
-      } catch (error) {
-        console.warn("[NavOS] Failed to persist navigation state:", error);
+  useEffect(() => {
+    return () => {
+      if (persistNavigationStateTimeoutRef.current) {
+        clearTimeout(persistNavigationStateTimeoutRef.current);
       }
-    },
-    [isAuthenticated],
-  );
+    };
+  }, []);
+
+  // Handle navigation state change
+  const onStateChange = useCallback((state: any) => {
+    if (persistNavigationStateTimeoutRef.current) {
+      clearTimeout(persistNavigationStateTimeoutRef.current);
+    }
+
+    persistNavigationStateTimeoutRef.current = setTimeout(() => {
+      persistNavigationStateTimeoutRef.current = null;
+
+      if (!useAuthStore.getState().isAuthenticated || !state) {
+        return;
+      }
+
+      void AsyncStorage.setItem(
+        NAV_STATE_KEY,
+        JSON.stringify({
+          version: NAV_VERSION,
+          timestamp: Date.now(),
+          state,
+        }),
+      ).catch((error) => {
+        console.warn("[NavOS] Failed to persist navigation state:", error);
+      });
+    }, 200);
+  }, []);
 
   // Track screen views for analytics
   const onReady = useCallback(() => {

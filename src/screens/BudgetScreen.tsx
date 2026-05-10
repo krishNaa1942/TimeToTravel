@@ -8,21 +8,26 @@
  * - Premium UI/UX
  */
 
-import React, { memo, useCallback, useMemo } from "react";
+import React, { memo, useCallback, useEffect, useMemo } from "react";
 import {
-  View,
-  ScrollView,
-  StyleSheet,
+  AccessibilityInfo,
   FlatList,
-  Dimensions,
+  InteractionManager,
+  View,
+  StyleSheet,
 } from "react-native";
 import { Text, Button, TextInput, Divider } from "react-native-paper";
 import { useRoute, RouteProp } from "@react-navigation/native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
-import { useBudgetPlanner, TravelClass, BudgetInsights } from "@/hooks/useBudgetPlanner";
+import {
+  useBudgetPlanner,
+  TravelClass,
+  BudgetInsights,
+} from "@/hooks/useBudgetPlanner";
 import { PressableScale } from "@/components/UI/PressableScale";
-import { DestinationDetailSkeleton } from "@/components/UI/SkeletonLoader";
+import { Shimmer } from "@/components/UI/SkeletonLoader";
+import { getAnalytics } from "@/core/telemetry/Analytics";
 import { RootStackParamList, BudgetEstimate } from "@/types";
 import { colors, spacing } from "@/theme/colors";
 
@@ -32,17 +37,98 @@ import { colors, spacing } from "@/theme/colors";
 
 type RouteType = RouteProp<RootStackParamList, "Budget">;
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
-
 // ─────────────────────────────────────────────────────────────
 // CONSTANTS
 // ─────────────────────────────────────────────────────────────
 
-const TRAVEL_CLASSES: { key: TravelClass; label: string; icon: string; description: string }[] = [
-  { key: "economy", label: "Economy", icon: "wallet-outline", description: "Budget-friendly" },
-  { key: "comfort", label: "Comfort", icon: "seat-passenger", description: "Balanced" },
-  { key: "premium", label: "Premium", icon: "star-circle", description: "Luxury" },
+const TRAVEL_CLASSES: {
+  key: TravelClass;
+  label: string;
+  icon: string;
+  description: string;
+}[] = [
+  {
+    key: "economy",
+    label: "Economy",
+    icon: "wallet-outline",
+    description: "Budget-friendly",
+  },
+  {
+    key: "comfort",
+    label: "Comfort",
+    icon: "seat-passenger",
+    description: "Balanced",
+  },
+  {
+    key: "premium",
+    label: "Premium",
+    icon: "star-circle",
+    description: "Luxury",
+  },
 ];
+
+const BUDGET_CARD_COLORS = [
+  colors.primary,
+  colors.success,
+  colors.warning,
+  colors.accent,
+  colors.error,
+];
+
+const formatCurrency = (value: number | null | undefined): string => {
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    return "N/A";
+  }
+
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(value);
+};
+
+const buildBudgetBreakdown = (estimate: BudgetEstimate | null) => {
+  const accommodation = estimate?.accommodation ?? 0;
+  const food = estimate?.food ?? 0;
+  const transport = estimate?.transport ?? 0;
+  const activities = estimate?.activities ?? 0;
+  const miscellaneous = estimate?.miscellaneous ?? 0;
+
+  return [
+    {
+      label: "Accommodation",
+      icon: "bed",
+      value: accommodation,
+      color: BUDGET_CARD_COLORS[0],
+    },
+    {
+      label: "Food & Dining",
+      icon: "food",
+      value: food,
+      color: BUDGET_CARD_COLORS[1],
+    },
+    {
+      label: "Transport",
+      icon: "car",
+      value: transport,
+      color: BUDGET_CARD_COLORS[2],
+    },
+    {
+      label: "Activities",
+      icon: "run",
+      value: activities,
+      color: BUDGET_CARD_COLORS[3],
+    },
+    {
+      label: "Miscellaneous",
+      icon: "package-variant",
+      value: miscellaneous,
+      color: BUDGET_CARD_COLORS[4],
+    },
+  ];
+};
+
+type BreakdownItem = ReturnType<typeof buildBudgetBreakdown>[number];
 
 // ─────────────────────────────────────────────────────────────
 // SUB-COMPONENTS (Memoized)
@@ -55,47 +141,64 @@ interface SelectionChipProps {
   disabled?: boolean;
 }
 
-const SelectionChip = memo(({ label, selected, onPress, disabled }: SelectionChipProps) => (
-  <PressableScale
-    style={[styles.chip, selected && styles.chipActive, disabled && styles.chipDisabled]}
-    onPress={disabled ? undefined : onPress}
-    accessibilityRole="button"
-    accessibilityState={{ selected, disabled }}
-  >
-    <Text style={[styles.chipText, selected && styles.chipTextActive]} numberOfLines={1}>
-      {label}
-    </Text>
-  </PressableScale>
-));
+const SelectionChip = memo(
+  ({ label, selected, onPress, disabled }: SelectionChipProps) => (
+    <PressableScale
+      style={[
+        styles.chip,
+        selected && styles.chipActive,
+        disabled && styles.chipDisabled,
+      ]}
+      onPress={disabled ? undefined : onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected, disabled }}
+      accessibilityLabel={`Select destination ${label}`}
+      accessibilityHint="Updates the budget form with this destination"
+    >
+      <Text
+        style={[styles.chipText, selected && styles.chipTextActive]}
+        numberOfLines={1}
+      >
+        {label}
+      </Text>
+    </PressableScale>
+  ),
+);
 
 SelectionChip.displayName = "SelectionChip";
 
 // ─────────────────────────────────────────────────────────────
 
 interface TravelClassCardProps {
-  option: typeof TRAVEL_CLASSES[0];
+  option: (typeof TRAVEL_CLASSES)[0];
   selected: boolean;
   onPress: () => void;
 }
 
-const TravelClassCard = memo(({ option, selected, onPress }: TravelClassCardProps) => (
-  <PressableScale
-    style={[styles.classCard, selected && styles.classCardActive]}
-    onPress={onPress}
-    accessibilityRole="button"
-    accessibilityState={{ selected }}
-  >
-    <View style={[styles.classIconBg, selected && styles.classIconBgActive]}>
-      <MaterialCommunityIcons
-        name={option.icon as any}
-        size={22}
-        color={selected ? "#FFF" : colors.primary}
-      />
-    </View>
-    <Text style={[styles.classLabel, selected && styles.classLabelActive]}>{option.label}</Text>
-    <Text style={styles.classDesc}>{option.description}</Text>
-  </PressableScale>
-));
+const TravelClassCard = memo(
+  ({ option, selected, onPress }: TravelClassCardProps) => (
+    <PressableScale
+      style={[styles.classCard, selected && styles.classCardActive]}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      accessibilityLabel={`${option.label}, ${option.description}`}
+      accessibilityHint="Selects a travel class for the estimate"
+    >
+      <View style={[styles.classIconBg, selected && styles.classIconBgActive]}>
+        <MaterialCommunityIcons
+          name={option.icon as any}
+          size={22}
+          color={selected ? "#FFF" : colors.primary}
+        />
+      </View>
+      <Text style={[styles.classLabel, selected && styles.classLabelActive]}>
+        {option.label}
+      </Text>
+      <Text style={styles.classDesc}>{option.description}</Text>
+    </PressableScale>
+  ),
+);
 
 TravelClassCard.displayName = "TravelClassCard";
 
@@ -109,36 +212,53 @@ interface FormFieldProps {
   keyboardType?: "numeric" | "default";
   placeholder?: string;
   suffix?: string;
+  accessibilityHint?: string;
 }
 
-const FormField = memo(({ label, value, onChangeText, error, keyboardType, placeholder, suffix }: FormFieldProps) => (
-  <View style={styles.fieldContainer}>
-    <Text style={styles.fieldLabel}>{label}</Text>
-    <View style={styles.inputWrapper}>
-      <TextInput
-        mode="outlined"
-        value={value}
-        onChangeText={onChangeText}
-        keyboardType={keyboardType || "default"}
-        placeholder={placeholder}
-        placeholderTextColor={colors.gray}
-        style={styles.input}
-        outlineColor={error ? colors.error : colors.border}
-        activeOutlineColor={error ? colors.error : colors.primary}
-        error={!!error}
-        right={suffix ? <TextInput.Affix text={suffix} /> : undefined}
-        accessible={true}
-        accessibilityLabel={label}
-      />
-      {error && (
-        <View style={styles.errorRow}>
-          <MaterialCommunityIcons name="alert-circle" size={14} color={colors.error} />
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
-      )}
+const FormField = memo(
+  ({
+    label,
+    value,
+    onChangeText,
+    error,
+    keyboardType,
+    placeholder,
+    suffix,
+    accessibilityHint,
+  }: FormFieldProps) => (
+    <View style={styles.fieldContainer}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <View style={styles.inputWrapper}>
+        <TextInput
+          mode="outlined"
+          value={value}
+          onChangeText={onChangeText}
+          keyboardType={keyboardType || "default"}
+          placeholder={placeholder}
+          placeholderTextColor={colors.gray}
+          style={styles.input}
+          outlineColor={error ? colors.error : colors.border}
+          activeOutlineColor={error ? colors.error : colors.primary}
+          error={!!error}
+          right={suffix ? <TextInput.Affix text={suffix} /> : undefined}
+          accessible={true}
+          accessibilityLabel={label}
+          accessibilityHint={accessibilityHint}
+        />
+        {error && (
+          <View style={styles.errorRow}>
+            <MaterialCommunityIcons
+              name="alert-circle"
+              size={14}
+              color={colors.error}
+            />
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
+      </View>
     </View>
-  </View>
-));
+  ),
+);
 
 FormField.displayName = "FormField";
 
@@ -150,38 +270,109 @@ interface ResultCardProps {
   onClose: () => void;
 }
 
-const ResultCard = memo(({ estimate, insights, onClose }: ResultCardProps) => {
-  const breakdown = useMemo(() => [
-    { label: "Accommodation", icon: "bed", value: estimate.accommodation, color: "#3B82F6" },
-    { label: "Food & Dining", icon: "food", value: estimate.food, color: "#10B981" },
-    { label: "Transport", icon: "car", value: estimate.transport, color: "#F59E0B" },
-    { label: "Activities", icon: "run", value: estimate.activities, color: "#8B5CF6" },
-    { label: "Miscellaneous", icon: "package-variant", value: estimate.miscellaneous, color: "#EC4899" },
-  ], [estimate]);
+interface BreakdownRowProps {
+  item: BreakdownItem;
+  maxValue: number;
+}
 
-  const maxValue = Math.max(...breakdown.map(b => b.value));
+const BreakdownRow = memo(({ item, maxValue }: BreakdownRowProps) => {
+  const safeMax = Math.max(maxValue, 1);
+  const width = Math.max((item.value / safeMax) * 100, 0);
 
   return (
-    <View style={styles.resultCard}>
+    <View style={styles.breakdownRow}>
+      <View style={styles.breakdownLabelRow}>
+        <View
+          style={[styles.breakdownIcon, { backgroundColor: `${item.color}15` }]}
+        >
+          <MaterialCommunityIcons
+            name={item.icon as any}
+            size={16}
+            color={item.color}
+          />
+        </View>
+        <View style={styles.breakdownTextBlock}>
+          <Text style={styles.breakdownLabel}>{item.label}</Text>
+          <Text style={styles.breakdownSubtext}>
+            {formatCurrency(item.value)}
+          </Text>
+        </View>
+      </View>
+      <View style={styles.breakdownRight}>
+        <Text style={styles.breakdownValue}>{formatCurrency(item.value)}</Text>
+        <View style={styles.miniBarBg}>
+          <View
+            style={[
+              styles.miniBar,
+              {
+                width: `${width}%`,
+                backgroundColor: item.color,
+              },
+            ]}
+          />
+        </View>
+      </View>
+    </View>
+  );
+});
+
+BreakdownRow.displayName = "BreakdownRow";
+
+const ResultCard = memo(({ estimate, insights, onClose }: ResultCardProps) => {
+  const breakdown = useMemo(
+    () => buildBudgetBreakdown(estimate),
+    [
+      estimate.accommodation,
+      estimate.activities,
+      estimate.food,
+      estimate.miscellaneous,
+      estimate.transport,
+    ],
+  );
+
+  const maxValue = useMemo(
+    () => Math.max(...breakdown.map((b) => b.value), 1),
+    [breakdown],
+  );
+
+  return (
+    <View
+      style={styles.resultCard}
+      accessibilityLiveRegion="polite"
+      accessibilityRole="summary"
+      accessibilityLabel={`Budget estimate for ${estimate.destination}`}
+    >
       {/* Close Button */}
-      <PressableScale style={styles.closeButton} onPress={onClose}>
+      <PressableScale
+        style={styles.closeButton}
+        onPress={onClose}
+        accessibilityRole="button"
+        accessibilityLabel="Hide budget estimate"
+        accessibilityHint="Collapses the current estimate and keeps your inputs"
+      >
         <MaterialCommunityIcons name="close" size={20} color={colors.gray} />
       </PressableScale>
 
       {/* Total Section */}
       <View style={styles.totalSection}>
         <Text style={styles.totalLabel}>Estimated Budget</Text>
-        <Text style={styles.totalValue}>
-          ₹{estimate.total?.toLocaleString("en-IN") || "N/A"}
-        </Text>
+        <Text style={styles.totalValue}>{formatCurrency(estimate.total)}</Text>
         <View style={styles.totalMeta}>
           <View style={styles.metaItem}>
-            <MaterialCommunityIcons name="calendar" size={14} color={colors.gray} />
+            <MaterialCommunityIcons
+              name="calendar"
+              size={14}
+              color={colors.gray}
+            />
             <Text style={styles.metaText}>{estimate.num_days} days</Text>
           </View>
           <View style={styles.metaDot} />
           <View style={styles.metaItem}>
-            <MaterialCommunityIcons name="account-group" size={14} color={colors.gray} />
+            <MaterialCommunityIcons
+              name="account-group"
+              size={14}
+              color={colors.gray}
+            />
             <Text style={styles.metaText}>{estimate.family_size} people</Text>
           </View>
           <View style={styles.metaDot} />
@@ -196,12 +387,16 @@ const ResultCard = memo(({ estimate, insights, onClose }: ResultCardProps) => {
       {insights && (
         <View style={styles.quickStats}>
           <View style={styles.quickStat}>
-            <Text style={styles.quickStatValue}>₹{insights.dailyAverage.toLocaleString("en-IN")}</Text>
+            <Text style={styles.quickStatValue}>
+              {formatCurrency(insights.dailyAverage)}
+            </Text>
             <Text style={styles.quickStatLabel}>per day</Text>
           </View>
           <View style={styles.quickStatDivider} />
           <View style={styles.quickStat}>
-            <Text style={styles.quickStatValue}>₹{insights.perPersonCost.toLocaleString("en-IN")}</Text>
+            <Text style={styles.quickStatValue}>
+              {formatCurrency(insights.perPersonCost)}
+            </Text>
             <Text style={styles.quickStatLabel}>per person</Text>
           </View>
         </View>
@@ -212,47 +407,45 @@ const ResultCard = memo(({ estimate, insights, onClose }: ResultCardProps) => {
       {/* Breakdown */}
       <View style={styles.breakdownSection}>
         <Text style={styles.sectionTitle}>Cost Breakdown</Text>
-        {breakdown.map((item) => (
-          <View key={item.label} style={styles.breakdownRow}>
-            <View style={styles.breakdownLabelRow}>
-              <View style={[styles.breakdownIcon, { backgroundColor: `${item.color}15` }]}>
-                <MaterialCommunityIcons name={item.icon as any} size={16} color={item.color} />
-              </View>
-              <Text style={styles.breakdownLabel}>{item.label}</Text>
-            </View>
-            <View style={styles.breakdownRight}>
-              <Text style={styles.breakdownValue}>₹{item.value?.toLocaleString("en-IN") || "0"}</Text>
-              <View style={styles.miniBarBg}>
-                <View 
-                  style={[
-                    styles.miniBar, 
-                    { 
-                      width: `${(item.value / maxValue) * 100}%`,
-                      backgroundColor: item.color 
-                    }
-                  ]} 
-                />
-              </View>
-            </View>
-          </View>
-        ))}
+        <FlatList
+          data={breakdown}
+          keyExtractor={(item) => item.label}
+          renderItem={({ item }) => (
+            <BreakdownRow item={item} maxValue={maxValue} />
+          )}
+          scrollEnabled={false}
+          ItemSeparatorComponent={() => (
+            <View style={styles.breakdownSeparator} />
+          )}
+        />
       </View>
 
       {/* Insights */}
       {insights && insights.tips.length > 0 && (
         <View style={styles.insightsSection}>
           <View style={styles.insightHeader}>
-            <MaterialCommunityIcons name="lightbulb-on" size={18} color={colors.accent} />
+            <MaterialCommunityIcons
+              name="lightbulb-on"
+              size={18}
+              color={colors.accent}
+            />
             <Text style={styles.insightTitle}>Smart Tips</Text>
           </View>
           <View style={styles.mostExpensive}>
             <Text style={styles.mostExpensiveText}>
-              <Text style={styles.highlightText}>{insights.mostExpensiveCategory}</Text> is your biggest expense
+              <Text style={styles.highlightText}>
+                {insights.mostExpensiveCategory}
+              </Text>{" "}
+              is your biggest expense
             </Text>
           </View>
           {insights.tips.map((tip, index) => (
             <View key={index} style={styles.tipRow}>
-              <MaterialCommunityIcons name="check-circle" size={14} color={colors.success} />
+              <MaterialCommunityIcons
+                name="check-circle"
+                size={14}
+                color={colors.success}
+              />
               <Text style={styles.tipText}>{tip}</Text>
             </View>
           ))}
@@ -267,26 +460,39 @@ ResultCard.displayName = "ResultCard";
 // ─────────────────────────────────────────────────────────────
 
 interface ErrorStateProps {
+  title?: string;
   message: string;
+  actionLabel?: string;
   onRetry: () => void;
 }
 
-const ErrorState = memo(({ message, onRetry }: ErrorStateProps) => (
-  <View style={styles.errorState}>
-    <MaterialCommunityIcons name="alert-circle-outline" size={48} color={colors.error} />
-    <Text style={styles.errorStateTitle}>Calculation Failed</Text>
-    <Text style={styles.errorStateMessage}>{message}</Text>
-    <Button
-      mode="contained"
-      onPress={onRetry}
-      buttonColor={colors.primary}
-      style={styles.retryButton}
-      icon="refresh"
-    >
-      Try Again
-    </Button>
-  </View>
-));
+const ErrorState = memo(
+  ({
+    title = "Calculation Failed",
+    message,
+    actionLabel = "Try Again",
+    onRetry,
+  }: ErrorStateProps) => (
+    <View style={styles.errorState} accessibilityRole="alert">
+      <MaterialCommunityIcons
+        name="alert-circle-outline"
+        size={48}
+        color={colors.error}
+      />
+      <Text style={styles.errorStateTitle}>{title}</Text>
+      <Text style={styles.errorStateMessage}>{message}</Text>
+      <Button
+        mode="contained"
+        onPress={onRetry}
+        buttonColor={colors.primary}
+        style={styles.retryButton}
+        icon="refresh"
+      >
+        {actionLabel}
+      </Button>
+    </View>
+  ),
+);
 
 ErrorState.displayName = "ErrorState";
 
@@ -294,12 +500,17 @@ ErrorState.displayName = "ErrorState";
 
 interface EmptyStateProps {
   hasDestination: boolean;
+  onRetry?: () => void;
 }
 
-const EmptyState = memo(({ hasDestination }: EmptyStateProps) => (
+const EmptyState = memo(({ hasDestination, onRetry }: EmptyStateProps) => (
   <View style={styles.emptyState}>
     <View style={styles.emptyIcon}>
-      <MaterialCommunityIcons name="calculator" size={48} color={colors.primary} />
+      <MaterialCommunityIcons
+        name="calculator"
+        size={48}
+        color={colors.primary}
+      />
     </View>
     <Text style={styles.emptyTitle}>
       {hasDestination ? "Ready to Calculate" : "Select a Destination"}
@@ -309,8 +520,56 @@ const EmptyState = memo(({ hasDestination }: EmptyStateProps) => (
         ? "Adjust your preferences and tap Calculate to see your budget estimate"
         : "Choose where you want to go to get started"}
     </Text>
+    {onRetry ? (
+      <Button
+        mode="outlined"
+        onPress={onRetry}
+        style={styles.retryButton}
+        textColor={colors.primary}
+      >
+        Refresh Destinations
+      </Button>
+    ) : null}
   </View>
 ));
+
+const BudgetResultSkeleton = memo(() => (
+  <View style={styles.resultCard} accessibilityRole="progressbar">
+    <View style={styles.skeletonClose}>
+      <Shimmer width={20} height={20} borderRadius={10} />
+    </View>
+    <View style={styles.totalSection}>
+      <Shimmer width={120} height={12} borderRadius={6} />
+      <Shimmer
+        width={180}
+        height={44}
+        borderRadius={12}
+        style={{ marginTop: 8 }}
+      />
+      <View style={styles.skeletonMetaRow}>
+        <Shimmer width={72} height={12} borderRadius={6} />
+        <Shimmer width={12} height={12} borderRadius={6} />
+        <Shimmer width={88} height={12} borderRadius={6} />
+        <Shimmer width={12} height={12} borderRadius={6} />
+        <Shimmer width={72} height={12} borderRadius={6} />
+      </View>
+    </View>
+    <Divider style={styles.divider} />
+    <View style={styles.breakdownSection}>
+      <Shimmer width={140} height={18} borderRadius={6} />
+      <View style={{ marginTop: spacing.md }}>
+        {[1, 2, 3, 4, 5].map((item) => (
+          <View key={item} style={styles.skeletonBreakdownRow}>
+            <Shimmer width={180} height={18} borderRadius={6} />
+            <Shimmer width={92} height={18} borderRadius={6} />
+          </View>
+        ))}
+      </View>
+    </View>
+  </View>
+));
+
+const DestinationDetailSkeleton = BudgetResultSkeleton;
 
 EmptyState.displayName = "EmptyState";
 
@@ -356,127 +615,144 @@ export default function BudgetScreen() {
   const hasValidDestination = !!formData.destination;
 
   return (
-    <ScrollView
+    <FlatList
+      data={[]}
+      renderItem={() => null}
       style={styles.container}
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
-    >
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerIcon}>
-          <MaterialCommunityIcons name="wallet-travel" size={28} color={colors.primary} />
-        </View>
-        <Text style={styles.title}>Trip Budget Planner</Text>
-        <Text style={styles.subtitle}>
-          Get an intelligent cost estimate for your adventure
-        </Text>
-      </View>
-
-      {/* Destination Selection */}
-      {!preselectedDestination && destinations.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Select Destination</Text>
-          <FlatList
-            data={destinations}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <SelectionChip
-                label={item.label}
-                selected={formData.destination === item.label}
-                onPress={() => updateField("destination", item.label)}
+      ListHeaderComponent={
+        <>
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={styles.headerIcon}>
+              <MaterialCommunityIcons
+                name="wallet-travel"
+                size={28}
+                color={colors.primary}
               />
-            )}
-            contentContainerStyle={styles.chipList}
-          />
-        </View>
-      )}
-
-      {/* Selected Destination Display */}
-      {preselectedDestination && (
-        <View style={styles.selectedDest}>
-          <MaterialCommunityIcons name="map-marker" size={18} color={colors.primary} />
-          <Text style={styles.selectedDestText}>{preselectedDestination}</Text>
-        </View>
-      )}
-
-      {/* Form Fields */}
-      <View style={styles.formSection}>
-        <View style={styles.formRow}>
-          <View style={styles.formHalf}>
-            <FormField
-              label="Trip Duration"
-              value={formData.days}
-              onChangeText={(text) => updateField("days", text)}
-              keyboardType="numeric"
-              placeholder="3"
-              suffix="days"
-              error={fieldErrors.days}
-            />
+            </View>
+            <Text style={styles.title}>Trip Budget Planner</Text>
+            <Text style={styles.subtitle}>
+              Get an intelligent cost estimate for your adventure
+            </Text>
           </View>
-          <View style={styles.formHalf}>
-            <FormField
-              label="Group Size"
-              value={formData.familySize}
-              onChangeText={(text) => updateField("familySize", text)}
-              keyboardType="numeric"
-              placeholder="2"
-              suffix="people"
-              error={fieldErrors.familySize}
-            />
+
+          {/* Destination Selection */}
+          {!preselectedDestination && destinations.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Select Destination</Text>
+              <FlatList
+                data={destinations}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => (
+                  <SelectionChip
+                    label={item.label}
+                    selected={formData.destination === item.label}
+                    onPress={() => updateField("destination", item.label)}
+                  />
+                )}
+                contentContainerStyle={styles.chipList}
+              />
+            </View>
+          )}
+
+          {/* Selected Destination Display */}
+          {preselectedDestination && (
+            <View style={styles.selectedDest}>
+              <MaterialCommunityIcons
+                name="map-marker"
+                size={18}
+                color={colors.primary}
+              />
+              <Text style={styles.selectedDestText}>
+                {preselectedDestination}
+              </Text>
+            </View>
+          )}
+
+          {/* Form Fields */}
+          <View style={styles.formSection}>
+            <View style={styles.formRow}>
+              <View style={styles.formHalf}>
+                <FormField
+                  label="Trip Duration"
+                  value={formData.days}
+                  onChangeText={(text) => updateField("days", text)}
+                  keyboardType="numeric"
+                  placeholder="3"
+                  suffix="days"
+                  error={fieldErrors.days}
+                />
+              </View>
+              <View style={styles.formHalf}>
+                <FormField
+                  label="Group Size"
+                  value={formData.familySize}
+                  onChangeText={(text) => updateField("familySize", text)}
+                  keyboardType="numeric"
+                  placeholder="2"
+                  suffix="people"
+                  error={fieldErrors.familySize}
+                />
+              </View>
+            </View>
           </View>
-        </View>
-      </View>
 
-      {/* Travel Class */}
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>Travel Class</Text>
-        <View style={styles.classGrid}>
-          {TRAVEL_CLASSES.map((option) => (
-            <TravelClassCard
-              key={option.key}
-              option={option}
-              selected={formData.travelClass === option.key}
-              onPress={() => updateField("travelClass", option.key)}
-            />
-          ))}
-        </View>
-      </View>
+          {/* Travel Class */}
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Travel Class</Text>
+            <View style={styles.classGrid}>
+              {TRAVEL_CLASSES.map((option) => (
+                <TravelClassCard
+                  key={option.key}
+                  option={option}
+                  selected={formData.travelClass === option.key}
+                  onPress={() => updateField("travelClass", option.key)}
+                />
+              ))}
+            </View>
+          </View>
 
-      {/* Calculate Button */}
-      <Button
-        mode="contained"
-        onPress={handleCalculate}
-        loading={isCalculating}
-        disabled={isCalculating || !hasValidDestination}
-        style={styles.calcButton}
-        buttonColor={colors.primary}
-        contentStyle={styles.calcButtonContent}
-        labelStyle={styles.calcButtonLabel}
-        icon="calculator"
-      >
-        {isCalculating ? "Calculating..." : "Calculate Budget"}
-      </Button>
+          {/* Calculate Button */}
+          <Button
+            mode="contained"
+            onPress={handleCalculate}
+            loading={isCalculating}
+            disabled={isCalculating || !hasValidDestination}
+            style={styles.calcButton}
+            buttonColor={colors.primary}
+            contentStyle={styles.calcButtonContent}
+            labelStyle={styles.calcButtonLabel}
+            icon="calculator"
+          >
+            {isCalculating ? "Calculating..." : "Calculate Budget"}
+          </Button>
 
-      {/* Error State */}
-      {calculationError && !estimate && (
-        <ErrorState message={calculationError} onRetry={handleCalculate} />
-      )}
+          {/* Error State */}
+          {calculationError && !estimate && (
+            <ErrorState message={calculationError} onRetry={handleCalculate} />
+          )}
 
-      {/* Result or Empty State */}
-      {!isCalculating && !calculationError && (
-        estimate ? (
-          <ResultCard estimate={estimate} insights={insights} onClose={handleClear} />
-        ) : (
-          <EmptyState hasDestination={hasValidDestination} />
-        )
-      )}
-
-      {/* Bottom Spacing */}
-      <View style={styles.bottomSpacer} />
-    </ScrollView>
+          {/* Result or Empty State */}
+          {!isCalculating &&
+            !calculationError &&
+            (estimate ? (
+              <ResultCard
+                estimate={estimate}
+                insights={insights}
+                onClose={handleClear}
+              />
+            ) : (
+              <EmptyState hasDestination={hasValidDestination} />
+            ))}
+        </>
+      }
+      ListFooterComponent={<View style={styles.bottomSpacer} />}
+    />
   );
 }
 
@@ -799,6 +1075,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flex: 1,
   },
+  breakdownTextBlock: {
+    flex: 1,
+  },
   breakdownIcon: {
     width: 32,
     height: 32,
@@ -811,6 +1090,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.text,
     fontWeight: "500",
+  },
+  breakdownSubtext: {
+    fontSize: 12,
+    color: colors.gray,
+    marginTop: 2,
   },
   breakdownRight: {
     alignItems: "flex-end",
@@ -832,6 +1116,11 @@ const styles = StyleSheet.create({
   miniBar: {
     height: "100%",
     borderRadius: 2,
+  },
+  breakdownSeparator: {
+    height: 1,
+    backgroundColor: `${colors.border}55`,
+    marginLeft: 42,
   },
 
   // Insights Section
@@ -938,6 +1227,31 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 8,
     lineHeight: 20,
+  },
+
+  // Skeleton State
+  skeletonClose: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  skeletonMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
+    marginTop: 8,
+  },
+  skeletonBreakdownRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 10,
   },
 
   // Bottom Spacer

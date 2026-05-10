@@ -3,17 +3,18 @@
  * Displays user avatar, name, and level with glassmorphism styling
  */
 
-import React, { memo } from 'react';
-import { View, Text, Image, StyleSheet, Pressable } from 'react-native';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
-import * as Haptics from 'expo-haptics';
-import { useUIStore } from '@/stores/uiStore';
-import { useUserLevel } from '@/stores/userBehaviorStore';
-import type { ProfileHeaderProps } from '../types';
+import React, { memo } from "react";
+import { View, Text, Image, StyleSheet, Pressable } from "react-native";
+import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
+import * as Haptics from "expo-haptics";
+import { useUIStore } from "@/stores/uiStore";
+import { useUserLevel } from "@/stores/userBehaviorStore";
+import type { ProfileHeaderProps } from "../types";
 
 const ProfileHeaderComponent: React.FC<ProfileHeaderProps> = ({
   user,
   level,
+  summary,
   onEditProfile,
 }) => {
   const { themeDark } = useUIStore();
@@ -27,7 +28,7 @@ const ProfileHeaderComponent: React.FC<ProfileHeaderProps> = ({
   const displayLevel = level || userLevel;
 
   return (
-    <Animated.View 
+    <Animated.View
       entering={FadeIn.delay(100).duration(400)}
       style={styles.container}
     >
@@ -41,9 +42,14 @@ const ProfileHeaderComponent: React.FC<ProfileHeaderProps> = ({
         {user?.avatar ? (
           <Image source={{ uri: user.avatar }} style={styles.avatar} />
         ) : (
-          <View style={[styles.avatarPlaceholder, themeDark && styles.avatarPlaceholderDark]}>
+          <View
+            style={[
+              styles.avatarPlaceholder,
+              themeDark && styles.avatarPlaceholderDark,
+            ]}
+          >
             <Text style={styles.avatarText}>
-              {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+              {user?.name?.charAt(0)?.toUpperCase() || "U"}
             </Text>
           </View>
         )}
@@ -52,16 +58,24 @@ const ProfileHeaderComponent: React.FC<ProfileHeaderProps> = ({
         </View>
       </Pressable>
 
-      <Animated.View 
+      <Animated.View
         entering={FadeInDown.delay(200).duration(400)}
         style={styles.infoContainer}
       >
         <Text style={[styles.name, themeDark && styles.nameDark]}>
-          {user?.name || 'Traveler'}
+          {user?.name || "Traveler"}
         </Text>
         <Text style={[styles.title, themeDark && styles.titleDark]}>
           {displayLevel.title}
         </Text>
+        {summary ? (
+          <Text
+            style={[styles.summary, themeDark && styles.summaryDark]}
+            numberOfLines={3}
+          >
+            {summary}
+          </Text>
+        ) : null}
       </Animated.View>
     </Animated.View>
   );
@@ -69,11 +83,11 @@ const ProfileHeaderComponent: React.FC<ProfileHeaderProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 20,
   },
   avatarContainer: {
-    position: 'relative',
+    position: "relative",
     marginBottom: 12,
   },
   avatar: {
@@ -81,63 +95,74 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 50,
     borderWidth: 3,
-    borderColor: '#8B5CF6',
+    borderColor: "#8B5CF6",
   },
   avatarPlaceholder: {
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#E5E7EB',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#E5E7EB",
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 3,
-    borderColor: '#8B5CF6',
+    borderColor: "#8B5CF6",
   },
   avatarPlaceholderDark: {
-    backgroundColor: '#374151',
+    backgroundColor: "#374151",
   },
   avatarText: {
     fontSize: 36,
-    fontWeight: '700',
-    color: '#8B5CF6',
+    fontWeight: "700",
+    color: "#8B5CF6",
   },
   levelBadge: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     right: 0,
-    backgroundColor: '#8B5CF6',
+    backgroundColor: "#8B5CF6",
     width: 32,
     height: 32,
     borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderColor: "#FFFFFF",
   },
   levelText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   infoContainer: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   name: {
     fontSize: 24,
-    fontWeight: '700',
-    color: '#111827',
+    fontWeight: "700",
+    color: "#111827",
     marginBottom: 4,
   },
   nameDark: {
-    color: '#F9FAFB',
+    color: "#F9FAFB",
   },
   title: {
     fontSize: 14,
-    color: '#6B7280',
-    fontWeight: '500',
+    color: "#6B7280",
+    fontWeight: "500",
   },
   titleDark: {
-    color: '#9CA3AF',
+    color: "#9CA3AF",
+  },
+  summary: {
+    fontSize: 13,
+    color: "#4B5563",
+    marginTop: 8,
+    textAlign: "center",
+    lineHeight: 18,
+    maxWidth: 280,
+  },
+  summaryDark: {
+    color: "#D1D5DB",
   },
   pressed: {
     opacity: 0.8,

@@ -15,7 +15,7 @@ import type {
   ProfileValidationErrors,
   UserProfile,
   PreferenceSettings,
-} from '../types';
+} from "../types";
 
 // ─────────────────────────────────────────────────────────────
 // PERSONALITY CONFIGURATION
@@ -23,52 +23,52 @@ import type {
 
 export const PERSONALITY_CONFIG: PersonalityConfigMap = {
   explorer: {
-    icon: '🌍',
-    color: '#3B82F6',
-    label: 'Globe Trekker',
-    description: 'You seek new horizons and hidden gems!',
+    icon: "🌍",
+    color: "#3B82F6",
+    label: "Globe Trekker",
+    description: "You seek new horizons and hidden gems!",
   },
   foodie: {
-    icon: '🍽️',
-    color: '#F59E0B',
-    label: 'Culinary Voyager',
-    description: 'You travel for tastes and culinary experiences!',
+    icon: "🍽️",
+    color: "#F59E0B",
+    label: "Culinary Voyager",
+    description: "You travel for tastes and culinary experiences!",
   },
   luxury: {
-    icon: '💎',
-    color: '#8B5CF6',
-    label: 'Luxury Connoisseur',
-    description: 'You appreciate the finer things!',
+    icon: "💎",
+    color: "#8B5CF6",
+    label: "Luxury Connoisseur",
+    description: "You appreciate the finer things!",
   },
   adventure: {
-    icon: '🏔️',
-    color: '#EF4444',
-    label: 'Thrill Seeker',
-    description: 'Adrenaline is your fuel!',
+    icon: "🏔️",
+    color: "#EF4444",
+    label: "Thrill Seeker",
+    description: "Adrenaline is your fuel!",
   },
   culture: {
-    icon: '🏛️',
-    color: '#EC4899',
-    label: 'Culture Enthusiast',
-    description: 'History and art captivate you!',
+    icon: "🏛️",
+    color: "#EC4899",
+    label: "Culture Enthusiast",
+    description: "History and art captivate you!",
   },
   relaxation: {
-    icon: '🧘',
-    color: '#10B981',
-    label: 'Zen Wanderer',
-    description: 'Peace and tranquility guide you!',
+    icon: "🧘",
+    color: "#10B981",
+    label: "Zen Wanderer",
+    description: "Peace and tranquility guide you!",
   },
   budget: {
-    icon: '💡',
-    color: '#06B6D4',
-    label: 'Smart Traveler',
-    description: 'You maximize value!',
+    icon: "💡",
+    color: "#06B6D4",
+    label: "Smart Traveler",
+    description: "You maximize value!",
   },
   social: {
-    icon: '🦋',
-    color: '#F97316',
-    label: 'Social Butterfly',
-    description: 'Travel is better together!',
+    icon: "🦋",
+    color: "#F97316",
+    label: "Social Butterfly",
+    description: "Travel is better together!",
   },
 };
 
@@ -77,16 +77,16 @@ export const PERSONALITY_CONFIG: PersonalityConfigMap = {
 // ─────────────────────────────────────────────────────────────
 
 export const LEVEL_TITLES: string[] = [
-  'Newcomer',
-  'Wanderer',
-  'Explorer',
-  'Adventurer',
-  'Globe Trotter',
-  'Jet Setter',
-  'World Citizen',
-  'Travel Master',
-  'Globe Master',
-  'Legendary Voyager',
+  "Newcomer",
+  "Wanderer",
+  "Explorer",
+  "Adventurer",
+  "Globe Trotter",
+  "Jet Setter",
+  "World Citizen",
+  "Travel Master",
+  "Globe Master",
+  "Legendary Voyager",
 ];
 
 export const XP_VALUES: Record<string, number> = {
@@ -112,7 +112,7 @@ const MAX_NAME_LENGTH = 100;
 
 export const validateProfileInput = (
   name: string,
-  email: string
+  email: string,
 ): ProfileValidationErrors => {
   const errors: ProfileValidationErrors = {};
 
@@ -120,15 +120,15 @@ export const validateProfileInput = (
   const trimmedEmail = email.trim().toLowerCase();
 
   if (!trimmedName) {
-    errors.name = 'Name cannot be empty.';
+    errors.name = "Name cannot be empty.";
   } else if (trimmedName.length > MAX_NAME_LENGTH) {
-    errors.name = 'Name is too long.';
+    errors.name = "Name is too long.";
   }
 
   if (!trimmedEmail) {
-    errors.email = 'Email cannot be empty.';
+    errors.email = "Email cannot be empty.";
   } else if (!EMAIL_REGEX.test(trimmedEmail)) {
-    errors.email = 'Please enter a valid email address.';
+    errors.email = "Please enter a valid email address.";
   }
 
   return errors;
@@ -161,9 +161,17 @@ export const createDefaultTravelDNA = (): TravelDNA => ({
 export const computeTravelDNA = (
   viewedDestinations: string[],
   savedDestinations: string[],
-  categoryPreferences: Array<{ category: string; score: number; interactions: number }>
+  categoryPreferences: Array<{
+    category: string;
+    score: number;
+    interactions: number;
+  }>,
 ): TravelDNA => {
   const dna = createDefaultTravelDNA();
+  const signalStrength =
+    viewedDestinations.length +
+    savedDestinations.length +
+    categoryPreferences.length;
 
   // Base calculations from destination interactions
   dna.explorer = Math.min(100, viewedDestinations.length * 5);
@@ -171,19 +179,19 @@ export const computeTravelDNA = (
 
   // Calculate from category preferences
   const categoryMap: Record<string, keyof TravelDNA> = {
-    restaurant: 'foodie',
-    food: 'foodie',
-    museum: 'culture',
-    historical: 'culture',
-    culture: 'culture',
-    adventure: 'adventure',
-    outdoor: 'adventure',
-    beach: 'relaxation',
-    spa: 'relaxation',
-    resort: 'luxury',
-    hotel: 'luxury',
-    budget: 'budget',
-    hostel: 'budget',
+    restaurant: "foodie",
+    food: "foodie",
+    museum: "culture",
+    historical: "culture",
+    culture: "culture",
+    adventure: "adventure",
+    outdoor: "adventure",
+    beach: "relaxation",
+    spa: "relaxation",
+    resort: "luxury",
+    hotel: "luxury",
+    budget: "budget",
+    hostel: "budget",
   };
 
   categoryPreferences.forEach((pref) => {
@@ -193,13 +201,26 @@ export const computeTravelDNA = (
     }
   });
 
-  // Add some baseline variation for traits not yet computed
-  if (dna.foodie === 0) dna.foodie = Math.min(100, Math.floor(Math.random() * 30) + 40);
-  if (dna.adventure === 0) dna.adventure = Math.min(100, Math.floor(Math.random() * 25) + 35);
-  if (dna.culture === 0) dna.culture = Math.min(100, Math.floor(Math.random() * 20) + 45);
-  if (dna.relaxation === 0) dna.relaxation = Math.min(100, Math.floor(Math.random() * 30) + 30);
-  if (dna.luxury === 0) dna.luxury = Math.min(100, Math.floor(Math.random() * 25) + 25);
-  if (dna.budget === 0) dna.budget = Math.min(100, Math.floor(Math.random() * 35) + 30);
+  // Deterministic fallback values derived from available signals.
+  if (dna.foodie === 0) dna.foodie = Math.min(100, 25 + signalStrength * 2);
+  if (dna.adventure === 0)
+    dna.adventure = Math.min(
+      100,
+      22 + viewedDestinations.length * 3 + categoryPreferences.length * 2,
+    );
+  if (dna.culture === 0)
+    dna.culture = Math.min(
+      100,
+      28 + savedDestinations.length * 2 + categoryPreferences.length * 2,
+    );
+  if (dna.relaxation === 0)
+    dna.relaxation = Math.min(100, 20 + savedDestinations.length * 4);
+  if (dna.luxury === 0) dna.luxury = Math.min(100, 18 + signalStrength * 2);
+  if (dna.budget === 0)
+    dna.budget = Math.min(
+      100,
+      30 + savedDestinations.length * 2 + categoryPreferences.length,
+    );
 
   return dna;
 };
@@ -222,7 +243,7 @@ export const getDominantTrait = (dna: TravelDNA): TravelTrait => {
 export const createUserLevel = (
   level: number,
   xp: number,
-  xpToNext: number
+  xpToNext: number,
 ): UserLevel => {
   const progress = Math.min(100, (xp / xpToNext) * 100);
   const title = LEVEL_TITLES[Math.min(level - 1, LEVEL_TITLES.length - 1)];
@@ -251,7 +272,7 @@ export const computeLevelFromXP = (totalXP: number): UserLevel => {
 };
 
 // ─────────────────────────────────────────────────────────────
-// AI INSIGHTS GENERATION
+// INSIGHTS GENERATION
 // ─────────────────────────────────────────────────────────────
 
 export const generateAIInsights = (
@@ -261,26 +282,26 @@ export const generateAIInsights = (
   favoritesCount: number,
   level: number,
   levelTitle: string,
-  viewedDestinations: number
+  viewedDestinations: number,
 ): AIInsight[] => {
   const insights: AIInsight[] = [];
 
   // Achievement insights
   if (completedTrips > 0) {
     insights.push({
-      id: 'insight-trips',
-      type: 'achievement',
-      icon: '🎉',
-      message: `You've completed ${completedTrips} amazing trip${completedTrips > 1 ? 's' : ''}!`,
+      id: "insight-trips",
+      type: "achievement",
+      icon: "🎉",
+      message: `You've completed ${completedTrips} amazing trip${completedTrips > 1 ? "s" : ""}!`,
       actionable: false,
     });
   }
 
   if (streakCurrent >= 3) {
     insights.push({
-      id: 'insight-streak',
-      type: 'achievement',
-      icon: '🔥',
+      id: "insight-streak",
+      type: "achievement",
+      icon: "🔥",
       message: `${streakCurrent} day planning streak! Keep it up!`,
       actionable: false,
     });
@@ -288,9 +309,9 @@ export const generateAIInsights = (
 
   if (level >= 5) {
     insights.push({
-      id: 'insight-level',
-      type: 'achievement',
-      icon: '⭐',
+      id: "insight-level",
+      type: "achievement",
+      icon: "⭐",
       message: `Level ${level} ${levelTitle} - you're a travel pro!`,
       actionable: false,
     });
@@ -299,35 +320,36 @@ export const generateAIInsights = (
   // Suggestion insights
   if (favoritesCount >= 5) {
     insights.push({
-      id: 'insight-favorites',
-      type: 'suggestion',
-      icon: '💡',
+      id: "insight-favorites",
+      type: "suggestion",
+      icon: "💡",
       message: `${favoritesCount} destinations saved - time to book your next adventure!`,
       actionable: true,
-      actionLabel: 'View Saved',
-      actionRoute: 'Favorites',
+      actionLabel: "View Saved",
+      actionRoute: "Favorites",
     });
   }
 
   if (viewedDestinations >= 10 && tripCount === 0) {
     insights.push({
-      id: 'insight-explore',
-      type: 'suggestion',
-      icon: '✈️',
+      id: "insight-explore",
+      type: "suggestion",
+      icon: "✈️",
       message: `You've explored ${viewedDestinations} places! Ready to plan your first trip?`,
       actionable: true,
-      actionLabel: 'Plan Trip',
-      actionRoute: 'Trips',
+      actionLabel: "Plan Trip",
+      actionRoute: "TripWorkspace",
     });
   }
 
   // Trend insights
   if (tripCount > 3) {
     insights.push({
-      id: 'insight-trend',
-      type: 'trend',
-      icon: '📊',
-      message: 'Your travel activity is trending upward! Keep the momentum going.',
+      id: "insight-trend",
+      type: "trend",
+      icon: "📊",
+      message:
+        "Your travel activity is trending upward! Keep the momentum going.",
       actionable: false,
     });
   }
@@ -342,19 +364,19 @@ export const generateAIInsights = (
 export const generateSmartActions = (
   activeTrips: number,
   savedDestinations: number,
-  hasLocation: boolean
+  hasLocation: boolean,
 ): SmartAction[] => {
   const actions: SmartAction[] = [];
 
   // Resume planning action (highest priority if active trips)
   if (activeTrips > 0) {
     actions.push({
-      id: 'action-resume',
-      icon: '🗺️',
-      title: 'Resume Planning',
-      subtitle: 'Continue your trip',
-      color: '#3B82F6',
-      route: 'Trips',
+      id: "action-resume",
+      icon: "🗺️",
+      title: "Resume Planning",
+      subtitle: "Continue your trip",
+      color: "#3B82F6",
+      route: "TripWorkspace",
       priority: 1,
       visible: true,
     });
@@ -362,12 +384,12 @@ export const generateSmartActions = (
 
   // Discover new places
   actions.push({
-    id: 'action-discover',
-    icon: '✨',
-    title: 'Discover New Places',
-    subtitle: 'AI recommendations for you',
-    color: '#8B5CF6',
-    route: 'Explore',
+    id: "action-discover",
+    icon: "✨",
+    title: "Discover New Places",
+    subtitle: "Server-ranked recommendations for you",
+    color: "#8B5CF6",
+    route: "Places",
     priority: 2,
     visible: true,
   });
@@ -375,12 +397,12 @@ export const generateSmartActions = (
   // Explore nearby
   if (hasLocation) {
     actions.push({
-      id: 'action-nearby',
-      icon: '📍',
-      title: 'Explore Nearby',
-      subtitle: 'Find places around you',
-      color: '#10B981',
-      route: 'Places',
+      id: "action-nearby",
+      icon: "📍",
+      title: "Explore Nearby",
+      subtitle: "Find places around you",
+      color: "#10B981",
+      route: "Places",
       priority: 3,
       visible: true,
     });
@@ -388,17 +410,19 @@ export const generateSmartActions = (
 
   // Budget planning
   actions.push({
-    id: 'action-budget',
-    icon: '💰',
-    title: 'Plan Budget',
-    subtitle: 'Track your travel spending',
-    color: '#F59E0B',
-    route: 'Budget',
+    id: "action-budget",
+    icon: "💰",
+    title: "Plan Budget",
+    subtitle: "Track your travel spending",
+    color: "#F59E0B",
+    route: "Budget",
     priority: 4,
     visible: true,
   });
 
-  return actions.filter((a) => a.visible).sort((a, b) => a.priority - b.priority);
+  return actions
+    .filter((a) => a.visible)
+    .sort((a, b) => a.priority - b.priority);
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -408,35 +432,35 @@ export const generateSmartActions = (
 export const generateQuickActions = (
   tripCount: number,
   favoritesCount: number,
-  placesVisited: number
+  placesVisited: number,
 ): QuickAction[] => [
   {
-    id: 'quick-trips',
-    icon: '🧳',
-    label: 'My Trips',
+    id: "quick-trips",
+    icon: "🧳",
+    label: "My Trips",
     count: tripCount,
-    route: 'Trips',
+    route: "TripWorkspace",
   },
   {
-    id: 'quick-saved',
-    icon: '❤️',
-    label: 'Saved',
+    id: "quick-saved",
+    icon: "❤️",
+    label: "Saved",
     count: favoritesCount,
-    route: 'Favorites',
+    route: "Favorites",
   },
   {
-    id: 'quick-stats',
-    icon: '📊',
-    label: 'Stats',
+    id: "quick-stats",
+    icon: "📊",
+    label: "Stats",
     count: placesVisited,
-    route: 'TravelStats',
+    route: "TravelStats",
   },
   {
-    id: 'quick-settings',
-    icon: '⚙️',
-    label: 'Settings',
+    id: "quick-settings",
+    icon: "⚙️",
+    label: "Settings",
     count: null,
-    route: 'Settings',
+    route: "RoutePlanner",
   },
 ];
 
@@ -464,14 +488,14 @@ export const DEFAULT_USER_LEVEL: UserLevel = {
 // ─────────────────────────────────────────────────────────────
 
 export const formatTripCount = (count: number): string => {
-  if (count === 0) return 'No trips';
-  if (count === 1) return '1 trip';
+  if (count === 0) return "No trips";
+  if (count === 1) return "1 trip";
   return `${count} trips`;
 };
 
-export const formatCurrency = (amount: number, currency = 'USD'): string => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
+export const formatCurrency = (amount: number, currency = "USD"): string => {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
     currency,
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
@@ -479,8 +503,8 @@ export const formatCurrency = (amount: number, currency = 'USD'): string => {
 };
 
 export const getInitials = (name: string): string => {
-  if (!name) return '?';
-  const parts = name.trim().split(' ');
+  if (!name) return "?";
+  const parts = name.trim().split(" ");
   if (parts.length === 1) return parts[0][0].toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 };

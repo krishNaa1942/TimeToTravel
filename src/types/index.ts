@@ -117,6 +117,21 @@ export interface UnsplashImage {
 }
 
 // ── Navigation param types ────────────────────────────────────
+export interface CompareRouteParams {
+  dest1?: string;
+  dest2?: string;
+  days?: number;
+  familySize?: number;
+  travelClass?: string;
+  priority?:
+    | "budget"
+    | "safety"
+    | "weather"
+    | "balanced"
+    | "crowd"
+    | "experience";
+}
+
 export type RootStackParamList = {
   Auth: undefined;
   MainTabs: undefined;
@@ -126,7 +141,7 @@ export type RootStackParamList = {
   Packing: undefined;
   Favorites: undefined;
   Currency: undefined;
-  Compare: undefined;
+  Compare: CompareRouteParams | undefined;
   Places: undefined;
   RoutePlanner: undefined;
   TripWorkspace: undefined;

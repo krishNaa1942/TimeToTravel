@@ -5,6 +5,7 @@ import {
   ViewStyle,
   PressableProps,
   StyleProp,
+  Platform,
 } from "react-native";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -27,18 +28,19 @@ export const PressableScale = ({
     ...restProps
   } = props;
   const scale = useRef(new Animated.Value(1)).current;
+  const useNativeDriver = Platform.OS !== "web";
 
   const onPressIn = useCallback(
     (e: any) => {
       onPressInProp?.(e);
       Animated.spring(scale, {
         toValue: activeScale,
-        useNativeDriver: true,
+        useNativeDriver,
         tension: 100,
         friction: 10,
       }).start();
     },
-    [activeScale, onPressInProp, scale],
+    [activeScale, onPressInProp, scale, useNativeDriver],
   );
 
   const onPressOut = useCallback(
@@ -46,12 +48,12 @@ export const PressableScale = ({
       onPressOutProp?.(e);
       Animated.spring(scale, {
         toValue: 1,
-        useNativeDriver: true,
+        useNativeDriver,
         tension: 100,
         friction: 10,
       }).start();
     },
-    [onPressOutProp, scale],
+    [onPressOutProp, scale, useNativeDriver],
   );
 
   return (

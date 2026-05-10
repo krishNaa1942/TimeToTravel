@@ -2,6 +2,7 @@
   "expo": {
     "name": "Time To Travel",
     "slug": "TimeTravelMobile",
+    "scheme": "timetravel",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -47,7 +48,10 @@
         {
           "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location."
         }
-      ]
+      ],
+      "expo-apple-authentication",
+      "expo-secure-store",
+      "expo-web-browser"
     ],
     "extra": {
       "eas": {

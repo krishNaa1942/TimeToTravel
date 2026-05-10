@@ -37,7 +37,11 @@ export { tripsService } from "./trips";
 export type { CreateTripPayload, UpdateTripPayload } from "./trips";
 export { tripPlannerService } from "./tripPlanner";
 export { itineraryService } from "./itinerary";
-export type { ItineraryActivity, ItineraryDay, ItineraryResponse } from "./itinerary";
+export type {
+  ItineraryActivity,
+  ItineraryDay,
+  ItineraryResponse,
+} from "./itinerary";
 
 // ─────────────────────────────────────────────────────────────
 // BUDGET & EXPENSES
@@ -86,6 +90,12 @@ export type { PhraseData } from "./phrasebook";
 // SHARING & COLLABORATION
 // ─────────────────────────────────────────────────────────────
 export { sharingService } from "./sharing";
+export type {
+  SharedTrip,
+  CreateSharePayload,
+  ShareResponse,
+  SharesResponse,
+} from "./sharing";
 
 // ─────────────────────────────────────────────────────────────
 // STORAGE & OFFLINE

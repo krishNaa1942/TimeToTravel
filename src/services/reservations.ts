@@ -5,14 +5,28 @@
 
 import apiService from "./api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { tripPlannerService } from "./tripPlanner";
 import { cache } from "@/utils/cache";
 
 // ─────────────────────────────────────────────────────────────
 // TYPES
 // ─────────────────────────────────────────────────────────────
 
-export type ReservationType = "flight" | "hotel" | "restaurant" | "transport" | "activity" | "train" | "bus" | "cruise" | "other";
-export type ReservationStatus = "confirmed" | "pending" | "cancelled" | "completed";
+export type ReservationType =
+  | "flight"
+  | "hotel"
+  | "restaurant"
+  | "transport"
+  | "activity"
+  | "train"
+  | "bus"
+  | "cruise"
+  | "other";
+export type ReservationStatus =
+  | "confirmed"
+  | "pending"
+  | "cancelled"
+  | "completed";
 
 export interface Reservation {
   id: number;
@@ -100,9 +114,13 @@ export interface ParsedBooking {
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_KEY_PREFIX = "@reservations:";
+const BOOKMARK_KEY_PREFIX = "@reservation_bookmarks:";
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-export const RESERVATION_TYPES: Record<ReservationType, { emoji: string; label: string; color: string }> = {
+export const RESERVATION_TYPES: Record<
+  ReservationType,
+  { emoji: string; label: string; color: string }
+> = {
   flight: { emoji: "✈️", label: "Flight", color: "#3B82F6" },
   hotel: { emoji: "🏨", label: "Hotel", color: "#8B5CF6" },
   restaurant: { emoji: "🍽️", label: "Restaurant", color: "#F59E0B" },
@@ -114,7 +132,10 @@ export const RESERVATION_TYPES: Record<ReservationType, { emoji: string; label: 
   other: { emoji: "📋", label: "Other", color: "#64748B" },
 };
 
-export const STATUS_CONFIG: Record<ReservationStatus, { emoji: string; label: string; color: string }> = {
+export const STATUS_CONFIG: Record<
+  ReservationStatus,
+  { emoji: string; label: string; color: string }
+> = {
   confirmed: { emoji: "✅", label: "Confirmed", color: "#10B981" },
   pending: { emoji: "⏳", label: "Pending", color: "#F59E0B" },
   cancelled: { emoji: "❌", label: "Cancelled", color: "#EF4444" },
@@ -127,14 +148,29 @@ export const STATUS_CONFIG: Record<ReservationStatus, { emoji: string; label: st
 
 const parseEmailBooking = (text: string): ParsedBooking | null => {
   const lowerText = text.toLowerCase();
-  
+
   // Detect type
   let detectedType: ReservationType = "other";
-  if (lowerText.includes("flight") || lowerText.includes("airline") || lowerText.includes("departure") || lowerText.includes("arrival") || /airways|airlines|air\s*india|indigo|spicejet|vistara/i.test(text)) {
+  if (
+    lowerText.includes("flight") ||
+    lowerText.includes("airline") ||
+    lowerText.includes("departure") ||
+    lowerText.includes("arrival") ||
+    /airways|airlines|air\s*india|indigo|spicejet|vistara/i.test(text)
+  ) {
     detectedType = "flight";
-  } else if (lowerText.includes("hotel") || lowerText.includes("check-in") || lowerText.includes("check-out") || /resort|stay|booking|room|suite/i.test(text)) {
+  } else if (
+    lowerText.includes("hotel") ||
+    lowerText.includes("check-in") ||
+    lowerText.includes("check-out") ||
+    /resort|stay|booking|room|suite/i.test(text)
+  ) {
     detectedType = "hotel";
-  } else if (lowerText.includes("restaurant") || lowerText.includes("table") || lowerText.includes("reservation")) {
+  } else if (
+    lowerText.includes("restaurant") ||
+    lowerText.includes("table") ||
+    lowerText.includes("reservation")
+  ) {
     detectedType = "restaurant";
   } else if (lowerText.includes("train") || lowerText.includes("railway")) {
     detectedType = "train";
@@ -143,12 +179,16 @@ const parseEmailBooking = (text: string): ParsedBooking | null => {
   }
 
   // Extract confirmation code (uppercase alphanumeric, 4-8 chars)
-  const confirmMatch = text.match(/(?:confirmation|booking|reference|PNR)\s*[:#]?\s*([A-Z0-9]{4,8})/i) ||
-                       text.match(/\b([A-Z0-9]{6})\b/);
-  
+  const confirmMatch =
+    text.match(
+      /(?:confirmation|booking|reference|PNR)\s*[:#]?\s*([A-Z0-9]{4,8})/i,
+    ) || text.match(/\b([A-Z0-9]{6})\b/);
+
   // Extract provider
   const providerPatterns: Record<ReservationType, RegExp[]> = {
-    flight: [/(air\s*india|indigo|spicejet|vistara|go\s*air|airasia|emirates|etihad|qatar|british\s*airways)/i],
+    flight: [
+      /(air\s*india|indigo|spicejet|vistara|go\s*air|airasia|emirates|etihad|qatar|british\s*airways)/i,
+    ],
     hotel: [/marriott|taj|oberoi|itc|hilton|hyatt|radisson|ibis|novotel/i],
     restaurant: [/zomato|swiggy|dineout/i],
     transport: [/ola|uber|zoomcar/i],
@@ -158,7 +198,7 @@ const parseEmailBooking = (text: string): ParsedBooking | null => {
     cruise: [/carnival|royal\s*caribbean/i],
     other: [],
   };
-  
+
   let provider: string | undefined;
   for (const pattern of providerPatterns[detectedType] || []) {
     const match = text.match(pattern);
@@ -169,12 +209,14 @@ const parseEmailBooking = (text: string): ParsedBooking | null => {
   }
 
   // Extract dates
-  const dateMatch = text.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/) ||
-                    text.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
-  
+  const dateMatch =
+    text.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/) ||
+    text.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+
   // Extract amount
-  const amountMatch = text.match(/[₹$€£]\s*(\d[\d,]*)/) ||
-                      text.match(/(\d[\d,]*)\s*(rs|inr|usd|eur|£|€|\$)/i);
+  const amountMatch =
+    text.match(/[₹$€£]\s*(\d[\d,]*)/) ||
+    text.match(/(\d[\d,]*)\s*(rs|inr|usd|eur|£|€|\$)/i);
 
   // Build title
   let title = "";
@@ -186,7 +228,9 @@ const parseEmailBooking = (text: string): ParsedBooking | null => {
     }
   }
   if (!title) {
-    title = provider ? `${provider} Booking` : `${RESERVATION_TYPES[detectedType].label} Booking`;
+    title = provider
+      ? `${provider} Booking`
+      : `${RESERVATION_TYPES[detectedType].label} Booking`;
   }
 
   return {
@@ -194,7 +238,9 @@ const parseEmailBooking = (text: string): ParsedBooking | null => {
     title,
     provider,
     confirmation_code: confirmMatch?.[1],
-    amount: amountMatch ? parseFloat(amountMatch[1].replace(/,/g, "")) : undefined,
+    amount: amountMatch
+      ? parseFloat(amountMatch[1].replace(/,/g, ""))
+      : undefined,
   };
 };
 
@@ -206,10 +252,12 @@ const generateInsights = (reservations: Reservation[]): AIInsight[] => {
   const insights: AIInsight[] = [];
   const now = new Date();
   const today = now.toISOString().split("T")[0];
-  const weekLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+  const weekLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .split("T")[0];
 
   // Upcoming today
-  const todayReservations = reservations.filter(r => {
+  const todayReservations = reservations.filter((r) => {
     if (!r.start_datetime) return false;
     const start = new Date(r.start_datetime).toISOString().split("T")[0];
     return start === today && r.status === "confirmed";
@@ -225,7 +273,7 @@ const generateInsights = (reservations: Reservation[]): AIInsight[] => {
   }
 
   // Upcoming this week
-  const weekReservations = reservations.filter(r => {
+  const weekReservations = reservations.filter((r) => {
     if (!r.start_datetime) return false;
     const start = r.start_datetime.split("T")[0];
     return start >= today && start <= weekLater && r.status === "confirmed";
@@ -241,9 +289,9 @@ const generateInsights = (reservations: Reservation[]): AIInsight[] => {
   }
 
   // Missing essentials
-  const hasFlight = reservations.some(r => r.res_type === "flight");
-  const hasHotel = reservations.some(r => r.res_type === "hotel");
-  
+  const hasFlight = reservations.some((r) => r.res_type === "flight");
+  const hasHotel = reservations.some((r) => r.res_type === "hotel");
+
   if (hasFlight && !hasHotel) {
     insights.push({
       type: "suggestion",
@@ -255,7 +303,7 @@ const generateInsights = (reservations: Reservation[]): AIInsight[] => {
   }
 
   // Pending reservations
-  const pending = reservations.filter(r => r.status === "pending");
+  const pending = reservations.filter((r) => r.status === "pending");
   if (pending.length > 0) {
     insights.push({
       type: "warning",
@@ -279,6 +327,116 @@ const generateInsights = (reservations: Reservation[]): AIInsight[] => {
   return insights;
 };
 
+const getBookmarkKey = (tripId: number): string =>
+  `${BOOKMARK_KEY_PREFIX}${tripId}`;
+
+const readBookmarkIds = async (tripId: number): Promise<Set<number>> => {
+  try {
+    const raw = await AsyncStorage.getItem(getBookmarkKey(tripId));
+    if (!raw) return new Set();
+
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return new Set();
+
+    return new Set(
+      parsed
+        .map((value) => Number(value))
+        .filter((value) => Number.isFinite(value)),
+    );
+  } catch {
+    return new Set();
+  }
+};
+
+const writeBookmarkIds = async (
+  tripId: number,
+  bookmarkIds: Set<number>,
+): Promise<void> => {
+  await AsyncStorage.setItem(
+    getBookmarkKey(tripId),
+    JSON.stringify([...bookmarkIds]),
+  );
+};
+
+const applyBookmarkState = async (
+  tripId: number,
+  reservations: Reservation[],
+): Promise<Reservation[]> => {
+  const bookmarkIds = await readBookmarkIds(tripId);
+  return reservations.map((reservation) => ({
+    ...reservation,
+    is_bookmarked: bookmarkIds.has(reservation.id),
+  }));
+};
+
+const computeReservationStats = (
+  reservations: Reservation[],
+): ReservationStats => {
+  const byType: ReservationStats["by_type"] = {
+    flight: 0,
+    hotel: 0,
+    restaurant: 0,
+    transport: 0,
+    activity: 0,
+    train: 0,
+    bus: 0,
+    cruise: 0,
+    other: 0,
+  };
+  const byStatus: ReservationStats["by_status"] = {
+    confirmed: 0,
+    pending: 0,
+    cancelled: 0,
+    completed: 0,
+  };
+
+  const now = new Date();
+  const weekLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+  let totalAmount = 0;
+  let currency = "INR";
+  let upcomingCount = 0;
+  let completedCount = 0;
+  let upcomingThisWeek = 0;
+
+  for (const reservation of reservations) {
+    byType[reservation.res_type] += 1;
+    byStatus[reservation.status] += 1;
+
+    if (reservation.amount) {
+      totalAmount += reservation.amount;
+      currency = reservation.currency || currency;
+    }
+
+    if (reservation.status === "completed") {
+      completedCount += 1;
+    }
+
+    if (!reservation.start_datetime || reservation.status === "cancelled") {
+      continue;
+    }
+
+    const startDate = new Date(reservation.start_datetime);
+    if (startDate > now) {
+      upcomingCount += 1;
+    }
+    if (startDate >= now && startDate <= weekLater) {
+      upcomingThisWeek += 1;
+    }
+  }
+
+  return {
+    total_count: reservations.length,
+    by_type: byType,
+    by_status: byStatus,
+    total_amount: totalAmount,
+    currency,
+    upcoming_count: upcomingCount,
+    completed_count: completedCount,
+    upcoming_this_week: upcomingThisWeek,
+  };
+};
+
 // ─────────────────────────────────────────────────────────────
 // SERVICE
 // ─────────────────────────────────────────────────────────────
@@ -286,47 +444,135 @@ const generateInsights = (reservations: Reservation[]): AIInsight[] => {
 export const reservationService = {
   // Create reservation
   async create(data: ReservationCreateInput): Promise<Reservation> {
-    const response = await apiService.post<{ reservation: Reservation }>("/reservations", {
-      ...data,
-      currency: data.currency || "INR",
-      status: "pending",
-    });
+    const response = await apiService.post<{ reservation: Reservation }>(
+      "/reservations",
+      {
+        ...data,
+        currency: data.currency || "INR",
+        status: "pending",
+      },
+    );
     await this.invalidateCache(data.trip_id);
-    return response.reservation;
+    const bookmarkedReservations = await applyBookmarkState(
+      response.reservation.trip_id,
+      [response.reservation],
+    );
+    return bookmarkedReservations[0];
   },
 
   // Update reservation
   async update(id: number, data: ReservationUpdateInput): Promise<Reservation> {
-    const response = await apiService.put<{ reservation: Reservation }>(`/reservations/${id}`, data);
+    const response = await apiService.put<{ reservation: Reservation }>(
+      `/reservations/${id}`,
+      data,
+    );
     // Invalidate cache for this reservation's trip
     const allCache = await AsyncStorage.getAllKeys();
-    const reservationCacheKeys = allCache.filter(k => k.startsWith(CACHE_KEY_PREFIX));
+    const reservationCacheKeys = allCache.filter((k) =>
+      k.startsWith(CACHE_KEY_PREFIX),
+    );
     for (const key of reservationCacheKeys) {
       await AsyncStorage.removeItem(key);
     }
-    return response.reservation;
+    const bookmarkedReservations = await applyBookmarkState(
+      response.reservation.trip_id,
+      [response.reservation],
+    );
+    return bookmarkedReservations[0];
   },
 
   // Delete reservation
   async delete(id: number, tripId: number): Promise<void> {
     await apiService.delete(`/reservations/${id}`);
     await this.invalidateCache(tripId);
+    const bookmarkIds = await readBookmarkIds(tripId);
+    if (bookmarkIds.delete(id)) {
+      await writeBookmarkIds(tripId, bookmarkIds);
+    }
   },
 
   // List with filtering
-  async list(params: ReservationFilter = {}): Promise<{ reservations: Reservation[]; total: number }> {
-    const query = new URLSearchParams();
-    if (params.trip_id) query.append("trip_id", params.trip_id.toString());
-    if (params.type) query.append("type", params.type);
-    if (params.status) query.append("status", params.status);
-    if (params.search) query.append("search", params.search);
-    if (params.date_from) query.append("date_from", params.date_from);
-    if (params.date_to) query.append("date_to", params.date_to);
-    if (params.sort_by) query.append("sort_by", params.sort_by);
-    if (params.sort_order) query.append("sort_order", params.sort_order);
+  async list(
+    params: ReservationFilter = {},
+  ): Promise<{ reservations: Reservation[]; total: number }> {
+    const applyFilters = (reservations: Reservation[]): Reservation[] => {
+      let filtered = [...reservations];
 
-    const response = await apiService.get<{ reservations: Reservation[]; total: number }>(`/reservations?${query.toString()}`);
-    return response;
+      if (params.type) {
+        filtered = filtered.filter(
+          (reservation) => reservation.res_type === params.type,
+        );
+      }
+      if (params.status) {
+        filtered = filtered.filter(
+          (reservation) => reservation.status === params.status,
+        );
+      }
+      if (params.search) {
+        const query = params.search.toLowerCase();
+        filtered = filtered.filter(
+          (reservation) =>
+            reservation.title.toLowerCase().includes(query) ||
+            reservation.provider?.toLowerCase().includes(query) ||
+            reservation.confirmation_code?.toLowerCase().includes(query) ||
+            reservation.location?.toLowerCase().includes(query),
+        );
+      }
+      if (params.date_from) {
+        const startDate = new Date(params.date_from);
+        filtered = filtered.filter(
+          (reservation) =>
+            !reservation.start_datetime ||
+            new Date(reservation.start_datetime) >= startDate,
+        );
+      }
+      if (params.date_to) {
+        const endDate = new Date(params.date_to);
+        filtered = filtered.filter(
+          (reservation) =>
+            !reservation.start_datetime ||
+            new Date(reservation.start_datetime) <= endDate,
+        );
+      }
+
+      if (params.sort_by === "amount") {
+        filtered.sort((a, b) => (a.amount || 0) - (b.amount || 0));
+      } else if (params.sort_by === "type") {
+        filtered.sort((a, b) => a.res_type.localeCompare(b.res_type));
+      } else if (params.sort_by === "status") {
+        filtered.sort((a, b) => a.status.localeCompare(b.status));
+      } else {
+        filtered.sort((a, b) => {
+          const dateA = a.start_datetime
+            ? new Date(a.start_datetime).getTime()
+            : Infinity;
+          const dateB = b.start_datetime
+            ? new Date(b.start_datetime).getTime()
+            : Infinity;
+          return dateA - dateB;
+        });
+      }
+
+      if (params.sort_order === "desc") {
+        filtered.reverse();
+      }
+
+      return filtered;
+    };
+
+    if (params.trip_id) {
+      const reservations = await this.getByTrip(params.trip_id);
+      const filtered = applyFilters(reservations);
+      return { reservations: filtered, total: filtered.length };
+    }
+
+    const trips = await tripPlannerService.listTrips();
+    const reservationsByTrip = await Promise.all(
+      trips.trips.map((trip) => this.getByTrip(trip.id)),
+    );
+    const reservations = reservationsByTrip.flat();
+    const filtered = applyFilters(reservations);
+    return { reservations: filtered, total: filtered.length };
   },
 
   // Get by trip (with caching)
@@ -335,31 +581,68 @@ export const reservationService = {
 
     if (useCache) {
       const cached = await cache.get<Reservation[]>(cacheKey);
-      if (cached) return cached;
+      if (cached) {
+        return applyBookmarkState(tripId, cached);
+      }
     }
 
-    const response = await apiService.get<{ reservations: Reservation[] }>(`/reservations/trip/${tripId}`);
+    const response = await apiService.get<{ reservations: Reservation[] }>(
+      `/reservations/trip/${tripId}`,
+    );
     await cache.set(cacheKey, response.reservations, { ttl: CACHE_TTL });
-    return response.reservations;
+    return applyBookmarkState(tripId, response.reservations);
   },
 
   // Get stats
   async getStats(tripId: number): Promise<ReservationStats> {
-    const response = await apiService.get<ReservationStats>(`/reservations/stats/${tripId}`);
-    return response;
+    const reservations = await this.getByTrip(tripId);
+    return computeReservationStats(reservations);
   },
 
   // Get upcoming reservations
   async getUpcoming(tripId: number, days = 7): Promise<Reservation[]> {
-    const response = await apiService.get<{ reservations: Reservation[] }>(`/reservations/upcoming/${tripId}?days=${days}`);
-    return response.reservations;
+    const reservations = await this.getByTrip(tripId);
+    const now = new Date();
+    const cutoff = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+
+    return reservations
+      .filter((reservation) => {
+        if (!reservation.start_datetime || reservation.status === "cancelled")
+          return false;
+        const startDate = new Date(reservation.start_datetime);
+        return startDate >= now && startDate <= cutoff;
+      })
+      .sort((a, b) => {
+        const dateA = a.start_datetime
+          ? new Date(a.start_datetime).getTime()
+          : Infinity;
+        const dateB = b.start_datetime
+          ? new Date(b.start_datetime).getTime()
+          : Infinity;
+        return dateA - dateB;
+      });
   },
 
   // Toggle bookmark
   async toggleBookmark(id: number, tripId: number): Promise<Reservation> {
-    const response = await apiService.post<{ reservation: Reservation }>(`/reservations/${id}/bookmark`);
-    await this.invalidateCache(tripId);
-    return response.reservation;
+    const bookmarkIds = await readBookmarkIds(tripId);
+    if (bookmarkIds.has(id)) {
+      bookmarkIds.delete(id);
+    } else {
+      bookmarkIds.add(id);
+    }
+    await writeBookmarkIds(tripId, bookmarkIds);
+
+    const reservations = await this.getByTrip(tripId);
+    const reservation = reservations.find((item) => item.id === id);
+    if (!reservation) {
+      throw new Error("Reservation not found");
+    }
+
+    return {
+      ...reservation,
+      is_bookmarked: bookmarkIds.has(id),
+    };
   },
 
   // Parse booking from text

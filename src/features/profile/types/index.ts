@@ -59,15 +59,15 @@ export interface TopDestination {
 // TRAVEL DNA TYPES
 // ─────────────────────────────────────────────────────────────
 
-export type TravelTrait = 
-  | 'explorer' 
-  | 'foodie' 
-  | 'luxury' 
-  | 'adventure' 
-  | 'culture' 
-  | 'relaxation' 
-  | 'budget' 
-  | 'social';
+export type TravelTrait =
+  | "explorer"
+  | "foodie"
+  | "luxury"
+  | "adventure"
+  | "culture"
+  | "relaxation"
+  | "budget"
+  | "social";
 
 export interface TravelDNA {
   explorer: number;
@@ -113,7 +113,7 @@ export interface UserStreak {
 
 export interface AIInsight {
   id: string;
-  type: 'achievement' | 'suggestion' | 'trend' | 'reminder';
+  type: "achievement" | "suggestion" | "trend" | "reminder";
   icon: string;
   message: string;
   actionable?: boolean;
@@ -158,7 +158,7 @@ export interface SettingItem {
   id: string;
   icon: string;
   label: string;
-  type: 'toggle' | 'link' | 'button';
+  type: "toggle" | "link" | "button";
   value?: boolean;
   onPress?: () => void;
   route?: string;
@@ -180,14 +180,14 @@ export interface ProfileAnalyticsEvent {
   properties?: Record<string, unknown>;
 }
 
-export type ProfileEventType = 
-  | 'screen_view'
-  | 'edit_profile'
-  | 'logout'
-  | 'smart_action_click'
-  | 'quick_action_click'
-  | 'setting_toggle'
-  | 'refresh';
+export type ProfileEventType =
+  | "screen_view"
+  | "edit_profile"
+  | "logout"
+  | "smart_action_click"
+  | "quick_action_click"
+  | "setting_toggle"
+  | "refresh";
 
 // ─────────────────────────────────────────────────────────────
 // API RESPONSE TYPES
@@ -203,6 +203,27 @@ export interface StatsAPIResponse {
   stats: TravelStats;
 }
 
+export interface ProfileSummary {
+  profile: UserProfile;
+  stats: TravelStats;
+  preferences: Record<string, unknown>;
+  summary: string | null;
+  summaryMeta: Record<string, unknown>;
+  level: UserLevel;
+  travelDNA: TravelDNA;
+  personality: PersonalityConfig;
+  insights: AIInsight[];
+  smartActions: SmartAction[];
+  quickActions: QuickAction[];
+  generatedAt?: string | null;
+}
+
+export interface ProfileSummaryAPIResponse {
+  success: boolean;
+  data?: ProfileSummary;
+  error?: string;
+}
+
 // ─────────────────────────────────────────────────────────────
 // COMPONENT PROP TYPES
 // ─────────────────────────────────────────────────────────────
@@ -210,6 +231,7 @@ export interface StatsAPIResponse {
 export interface ProfileHeaderProps {
   user: UserProfile | null;
   level?: UserLevel;
+  summary?: string | null;
   onEditProfile?: () => void;
 }
 
@@ -225,6 +247,7 @@ export interface TravelDNACardProps {
 
 export interface InsightsCardProps {
   insights: AIInsight[];
+  onInsightPress?: (insight: AIInsight) => void;
 }
 
 export interface SmartActionsProps {
@@ -258,19 +281,19 @@ export interface ErrorStateProps {
 export interface ProfileState {
   isEditing: boolean;
   setEditing: (value: boolean) => void;
-  
+
   editedName: string;
   setEditedName: (value: string) => void;
-  
+
   editedEmail: string;
   setEditedEmail: (value: string) => void;
-  
+
   preferences: PreferenceSettings;
   updatePreference: <K extends keyof PreferenceSettings>(
     key: K,
-    value: PreferenceSettings[K]
+    value: PreferenceSettings[K],
   ) => void;
-  
+
   reset: () => void;
 }
 

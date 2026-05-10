@@ -1,7 +1,7 @@
 /**
  * 🔐 PRODUCTION AUTH SERVICE (JWT-based)
  * ======================================
- * 
+ *
  * Integrates with Flask backend JWT authentication (auth_v2.py)
  * - Handles access/refresh token pairs
  * - Auto-refreshes expired tokens
@@ -77,12 +77,12 @@ export const authServiceV2 = {
 
     try {
       const response = await apiClient.post<AuthResponse>(
-        "/api/auth/login",
+        "/auth/v2/login",
         {
           email: credentials.email.trim().toLowerCase(),
           password: credentials.password,
         },
-        { skipDedup: true }
+        { skipDedup: true },
       );
 
       if (!response.success || !response.user || !response.tokens) {
@@ -112,7 +112,7 @@ export const authServiceV2 = {
       console.log("✅ [AUTH] Login successful for:", user.email);
       return user;
     } catch (error) {
-      console.error("❌ [AUTH] Login failed:", error);
+      console.log("[AUTH] Login failed:", error);
 
       if (error instanceof ApiError) {
         // Add context-specific messages
@@ -120,6 +120,13 @@ export const authServiceV2 = {
           throw new ApiError({
             ...error,
             userMessage: "Invalid email or password. Please try again.",
+          });
+        }
+        if (error.code === "NOT_FOUND" || error.status === 404) {
+          throw new ApiError({
+            ...error,
+            userMessage:
+              "Sign-in service is unavailable right now. Please try again.",
           });
         }
         throw error;
@@ -130,7 +137,8 @@ export const authServiceV2 = {
         message: "Login failed",
         status: 500,
         retryable: false,
-        userMessage: "Unable to log in. Please check your connection and try again.",
+        userMessage:
+          "Unable to log in. Please check your connection and try again.",
       });
     }
   },
@@ -188,13 +196,13 @@ export const authServiceV2 = {
 
     try {
       const response = await apiClient.post<AuthResponse>(
-        "/api/auth/register",
+        "/auth/v2/register",
         {
           name: data.name.trim(),
           email: data.email.trim().toLowerCase(),
           password: data.password,
         },
-        { skipDedup: true }
+        { skipDedup: true },
       );
 
       if (!response.success || !response.user || !response.tokens) {
@@ -224,13 +232,21 @@ export const authServiceV2 = {
       console.log("✅ [AUTH] Registration successful for:", user.email);
       return user;
     } catch (error) {
-      console.error("❌ [AUTH] Registration failed:", error);
+      console.log("[AUTH] Registration failed:", error);
 
       if (error instanceof ApiError) {
         if (error.code === "CONFLICT" || error.status === 409) {
           throw new ApiError({
             ...error,
-            userMessage: "An account with this email already exists. Please log in instead.",
+            userMessage:
+              "An account with this email already exists. Please log in instead.",
+          });
+        }
+        if (error.code === "NOT_FOUND" || error.status === 404) {
+          throw new ApiError({
+            ...error,
+            userMessage:
+              "Sign-up service is unavailable right now. Please try again.",
           });
         }
         throw error;
@@ -254,13 +270,20 @@ export const authServiceV2 = {
 
     try {
       // Call logout endpoint to invalidate tokens on server
-      await apiClient.post("/api/auth/logout", { 
-        logout_all_devices: logoutAllDevices 
-      }, { skipRetry: true });
+      await apiClient.post(
+        "/auth/v2/logout",
+        {
+          logout_all_devices: logoutAllDevices,
+        },
+        { skipRetry: true },
+      );
       console.log("✅ [AUTH] Server logout successful");
     } catch (error) {
       // Continue with local logout even if server fails
-      console.warn("⚠️ [AUTH] Server logout failed (continuing with local):", error);
+      console.log(
+        "[AUTH] Server logout failed (continuing with local):",
+        error,
+      );
     }
 
     // Clear local tokens
@@ -282,16 +305,18 @@ export const authServiceV2 = {
     // Load tokens from storage if not in memory
     await tokenManager.loadTokensFromStorage();
 
-    if (!tokenManager.isAuthenticated()) {
+    const token = await tokenManager.getValidToken();
+
+    if (!token) {
       console.log("ℹ️ [AUTH] Not authenticated");
       return null;
     }
 
     try {
       // Verify with server
-      const response = await apiClient.get<{ user: { id: string; name: string; email: string } }>(
-        "/api/auth/me"
-      );
+      const response = await apiClient.get<{
+        user: { id: string; name: string; email: string };
+      }>("/auth/v2/me");
 
       if (response.user) {
         const user: User = {
@@ -309,7 +334,7 @@ export const authServiceV2 = {
 
       return null;
     } catch (error) {
-      console.warn("⚠️ [AUTH] Auth check failed:", error);
+      console.log("[AUTH] Auth check failed:", error);
       return null;
     }
   },
@@ -319,10 +344,12 @@ export const authServiceV2 = {
    */
   async getSessions(): Promise<any[]> {
     try {
-      const response = await apiClient.get<{ sessions: any[] }>("/api/auth/sessions");
+      const response = await apiClient.get<{ sessions: any[] }>(
+        "/auth/v2/sessions",
+      );
       return response.sessions || [];
     } catch (error) {
-      console.error("Failed to get sessions:", error);
+      console.log("[AUTH] Failed to get sessions:", error);
       return [];
     }
   },
@@ -331,17 +358,17 @@ export const authServiceV2 = {
    * Revoke a specific session
    */
   async revokeSession(sessionId: string): Promise<void> {
-    await apiClient.delete(`/api/auth/sessions/${sessionId}`);
+    await apiClient.delete(`/auth/v2/sessions/${sessionId}`);
   },
 
   /**
    * Update user profile
    */
   async updateProfile(data: { name?: string; email?: string }): Promise<User> {
-    const response = await apiClient.put<{ success: boolean; user: { id: string; name: string; email: string } }>(
-      "/api/auth/profile",
-      data
-    );
+    const response = await apiClient.put<{
+      success: boolean;
+      user: { id: string; name: string; email: string };
+    }>("/auth/v2/profile", data);
 
     if (response.user) {
       const user: User = {

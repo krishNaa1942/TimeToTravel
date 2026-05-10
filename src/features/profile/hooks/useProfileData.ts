@@ -3,18 +3,40 @@
  * Centralized hook for fetching and managing profile data
  */
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useMemo } from 'react';
-import { useAuthStore } from '@/stores/authStore';
-import { useUserBehaviorStore } from '@/stores/userBehaviorStore';
-import { statsService } from '@/services/stats';
-import { profileService } from '../services/profileService';
-import { queryKeys } from '@/api/queryKeys';
-import type { UserProfile, TravelStats, ProfileUpdatePayload } from '../types';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useMemo } from "react";
+import { useAuthStore } from "@/stores/authStore";
+import { profileService } from "../services/profileService";
+import { queryKeys } from "@/api/queryKeys";
+import {
+  DEFAULT_USER_LEVEL,
+  createDefaultTravelDNA,
+  PERSONALITY_CONFIG,
+} from "../utils/profileHelpers";
+import type {
+  AIInsight,
+  PersonalityConfig,
+  ProfileSummary,
+  ProfileUpdatePayload,
+  QuickAction,
+  SmartAction,
+  TravelDNA,
+  TravelStats,
+  UserLevel,
+  UserProfile,
+} from "../types";
 
 interface UseProfileDataReturn {
+  profile: ProfileSummary | null;
   user: UserProfile | null;
   stats: TravelStats | null;
+  level: UserLevel;
+  travelDNA: TravelDNA;
+  personality: PersonalityConfig;
+  summary: string | null;
+  insights: AIInsight[];
+  smartActions: SmartAction[];
+  quickActions: QuickAction[];
   isLoading: boolean;
   isError: boolean;
   error: Error | null;
@@ -26,111 +48,100 @@ interface UseProfileDataReturn {
 export const useProfileData = (): UseProfileDataReturn => {
   const queryClient = useQueryClient();
   const { user: authUser } = useAuthStore();
-  const { trackEvent } = useUserBehaviorStore();
 
-  // Fetch extended profile data
   const {
-    data: profileData,
-    isLoading: isProfileLoading,
-    isError: isProfileError,
-    error: profileError,
-    refetch: refetchProfile,
+    data: summaryData,
+    isLoading: isSummaryLoading,
+    isError: isSummaryError,
+    error: summaryError,
+    refetch: refetchSummary,
   } = useQuery({
-    queryKey: queryKeys.profile.data(),
-    queryFn: () => profileService.getProfile(),
-    enabled: !!authUser,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-
-  // Fetch travel stats
-  const {
-    data: statsData,
-    isLoading: isStatsLoading,
-    isError: isStatsError,
-    refetch: refetchStats,
-  } = useQuery({
-    queryKey: queryKeys.profile.stats(),
-    queryFn: () => statsService.getStats(),
+    queryKey: queryKeys.profile.summary(),
+    queryFn: () => profileService.getSummary(),
     enabled: !!authUser,
     staleTime: 5 * 60 * 1000,
   });
 
   // Profile update mutation
-  const { mutateAsync: updateProfileMutation, isPending: isUpdating } = useMutation({
-    mutationFn: (payload: ProfileUpdatePayload) => profileService.updateProfile(payload),
-    onSuccess: (data) => {
-      queryClient.setQueryData(queryKeys.profile.data(), data);
-    },
-    onError: (error) => {
-      console.error('Profile update failed:', error);
-    },
-  });
+  const { mutateAsync: updateProfileMutation, isPending: isUpdating } =
+    useMutation({
+      mutationFn: (payload: ProfileUpdatePayload) =>
+        profileService.updateProfile(payload),
+      onSuccess: async () => {
+        await queryClient.invalidateQueries({
+          queryKey: queryKeys.profile.summary(),
+        });
+        await queryClient.invalidateQueries({
+          queryKey: queryKeys.profile.data(),
+        });
+      },
+      onError: (error) => {
+        console.error("Profile update failed:", error);
+      },
+    });
 
-  const updateProfile = useCallback(async (payload: ProfileUpdatePayload) => {
-    await updateProfileMutation(payload);
-  }, [updateProfileMutation]);
+  const updateProfile = useCallback(
+    async (payload: ProfileUpdatePayload) => {
+      await updateProfileMutation(payload);
+    },
+    [updateProfileMutation],
+  );
 
-  // Memoized combined data
+  const profile = useMemo(
+    (): ProfileSummary | null => summaryData?.data ?? null,
+    [summaryData],
+  );
+
   const user = useMemo((): UserProfile | null => {
-    if (profileData?.data) return profileData.data;
+    if (profile?.profile) return profile.profile;
     if (authUser) {
       return {
         id: authUser.id,
-        name: authUser.name || '',
-        email: authUser.email || '',
+        name: authUser.name || "",
+        email: authUser.email || "",
         avatar_url: authUser.avatar_url || null,
         created_at: new Date().toISOString(),
       };
     }
     return null;
-  }, [profileData, authUser]);
+  }, [profile, authUser]);
 
-  const stats = useMemo((): TravelStats | null => {
-    if (statsData?.stats) {
-      // Use unknown then any to safely handle the API response shape
-      const s = statsData.stats as unknown as {
-        trips?: { total?: number; active?: number; completed?: number; upcoming?: number; planning?: number };
-        favorites_count?: number;
-        places_visited?: number;
-        total_spent?: number;
-        top_destinations?: Array<{ destination?: string; trips?: number; name?: string }>;
-      };
-      
-      const tripsData = s.trips || {};
-      
-      return {
-        trips: {
-          total: tripsData.total ?? 0,
-          active: tripsData.active ?? 0,
-          completed: tripsData.completed ?? 0,
-          upcoming: tripsData.upcoming ?? tripsData.planning ?? 0,
-        },
-        favorites_count: s.favorites_count ?? 0,
-        places_visited: s.places_visited ?? 0,
-        total_spent: s.total_spent ?? 0,
-        top_destinations: Array.isArray(s.top_destinations)
-          ? s.top_destinations.map((d, idx) => ({
-              id: `dest-${idx}`,
-              name: d.name || d.destination || 'Unknown',
-              visits: d.trips ?? 0,
-            }))
-          : [],
-      };
-    }
-    return null;
-  }, [statsData]);
+  const stats = useMemo(
+    (): TravelStats | null => profile?.stats ?? null,
+    [profile],
+  );
+  const level = useMemo(() => profile?.level ?? DEFAULT_USER_LEVEL, [profile]);
+  const travelDNA = useMemo(
+    () => profile?.travelDNA ?? createDefaultTravelDNA(),
+    [profile],
+  );
+  const personality = useMemo(
+    () => profile?.personality ?? PERSONALITY_CONFIG.explorer,
+    [profile],
+  );
+  const summary = useMemo(() => profile?.summary ?? null, [profile]);
+  const insights = useMemo(() => profile?.insights ?? [], [profile]);
+  const smartActions = useMemo(() => profile?.smartActions ?? [], [profile]);
+  const quickActions = useMemo(() => profile?.quickActions ?? [], [profile]);
 
   const refetch = useCallback(() => {
-    refetchProfile();
-    refetchStats();
-  }, [refetchProfile, refetchStats]);
+    refetchSummary();
+  }, [refetchSummary]);
 
   return {
+    profile,
     user,
     stats,
-    isLoading: isProfileLoading || isStatsLoading,
-    isError: isProfileError || isStatsError,
-    error: profileError,
+    level,
+    travelDNA,
+    personality,
+    summary,
+    insights,
+    smartActions,
+    quickActions,
+    isLoading: isSummaryLoading,
+    isError: isSummaryError,
+    error: summaryError as Error | null,
     refetch,
     updateProfile,
     isUpdating,

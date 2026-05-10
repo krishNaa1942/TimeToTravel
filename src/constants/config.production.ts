@@ -28,6 +28,19 @@ function extractHost(value: string | undefined | null): string | null {
   }
 }
 
+function isPrivateHost(host: string): boolean {
+  return (
+    host === "localhost" ||
+    host === "127.0.0.1" ||
+    host === "0.0.0.0" ||
+    host === "::1" ||
+    host === "10.0.2.2" ||
+    /^10\./.test(host) ||
+    /^192\.168\./.test(host) ||
+    /^172\.(1[6-9]|2\d|3[0-1])\./.test(host)
+  );
+}
+
 function getExpoHost(): string | null {
   const hostCandidates = [
     Constants.expoConfig?.hostUri,
@@ -46,24 +59,47 @@ function getExpoHost(): string | null {
   return null;
 }
 
+function resolveDevelopmentApiUrl(
+  candidateUrl: string,
+  expoHost: string | null,
+): string {
+  const candidateHost = extractHost(candidateUrl);
+
+  if (!candidateHost || !isPrivateHost(candidateHost)) {
+    return candidateUrl;
+  }
+
+  if (expoHost && candidateHost !== expoHost) {
+    return `http://${expoHost}:5001/api`;
+  }
+
+  return candidateUrl;
+}
+
 // API URLs - Use environment variables with fallbacks
 const getApiUrl = (): string => {
   // Priority: Environment variable > Expo extra > Platform default
 
+  const expoHost = getExpoHost();
+
   // Check for environment variable (set in .env or app.json extra)
   const envApiUrl = process.env.EXPO_PUBLIC_API_URL;
   if (envApiUrl) {
-    return envApiUrl;
+    return resolveDevelopmentApiUrl(envApiUrl, expoHost);
   }
 
   // Check Expo Constants (set in app.json under extra)
   const extraApiUrl = Constants.expoConfig?.extra?.apiUrl;
   if (extraApiUrl) {
-    return extraApiUrl;
+    return resolveDevelopmentApiUrl(extraApiUrl, expoHost);
   }
 
   const lanIp = process.env.LAN_IP;
   if (lanIp) {
+    if (expoHost && lanIp !== expoHost && isPrivateHost(lanIp)) {
+      return `http://${expoHost}:5001/api`;
+    }
+
     return `http://${lanIp}:5001/api`;
   }
 
@@ -79,7 +115,6 @@ const getApiUrl = (): string => {
     // Or use: npx expo start --tunnel to get a public URL
     if (Platform.OS === "android") {
       if (Constants.isDevice) {
-        const expoHost = getExpoHost();
         if (expoHost) {
           return `http://${expoHost}:5001/api`;
         }
@@ -87,7 +122,6 @@ const getApiUrl = (): string => {
       return "http://10.0.2.2:5001/api";
     }
 
-    const expoHost = getExpoHost();
     return `http://${expoHost || "127.0.0.1"}:5001/api`;
   }
 

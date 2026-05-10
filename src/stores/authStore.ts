@@ -1,11 +1,12 @@
 /**
  * Authentication Store (Zustand)
- * Manages user authentication state with enhanced features
+ * Manages user authentication state with secure token restoration
  */
 
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { apiClient, ApiError, tokenManager } from "@/services/apiClient";
 
 export interface User {
   id: string;
@@ -35,6 +36,24 @@ export interface AuthStore {
   updateUser: (updates: Partial<User>) => void;
 }
 
+const AUTH_TOKEN_MARKER = "session-active";
+
+const normalizeUser = (user: {
+  id: string | number;
+  name: string;
+  email: string;
+  avatar?: string;
+  avatar_url?: string;
+  preferences?: Record<string, any>;
+}): User => ({
+  id: String(user.id),
+  name: user.name,
+  email: user.email,
+  avatar: user.avatar,
+  avatar_url: user.avatar_url,
+  preferences: user.preferences,
+});
+
 export const useAuthStore = create<AuthStore>()(
   persist(
     (set, get) => ({
@@ -47,18 +66,19 @@ export const useAuthStore = create<AuthStore>()(
 
       // Action: Set token and persist
       setToken: async (token: string) => {
-        try {
-          await AsyncStorage.setItem("authToken", token);
-          set({ token, isAuthenticated: true });
-        } catch (error) {
-          console.error("Failed to save auth token:", error);
-          throw error;
-        }
+        set({
+          token: token ? AUTH_TOKEN_MARKER : null,
+          isAuthenticated: !!token,
+        });
       },
 
       // Action: Set user
       setUser: (user: User) => {
-        set({ user, isAuthenticated: true });
+        set({
+          user,
+          token: AUTH_TOKEN_MARKER,
+          isAuthenticated: true,
+        });
       },
 
       // Action: Set loading state
@@ -79,16 +99,19 @@ export const useAuthStore = create<AuthStore>()(
       // Action: Logout
       logout: async () => {
         try {
-          await AsyncStorage.multiRemove([
-            "authToken",
-            "accessToken",
-            "refreshToken",
-            "tokenExpiry",
-          ]);
-          set({ token: null, user: null, isAuthenticated: false });
+          const accessToken = await tokenManager.getValidToken();
+          if (accessToken) {
+            await apiClient.post(
+              "/auth/v2/logout",
+              { logout_all_devices: false },
+              { skipRetry: true, skipDedup: true },
+            );
+          }
         } catch (error) {
-          console.error("Failed to logout:", error);
-          throw error;
+          console.log("[AUTH] Failed to logout:", error);
+        } finally {
+          await tokenManager.clearTokens();
+          set({ token: null, user: null, isAuthenticated: false });
         }
       },
 
@@ -96,14 +119,67 @@ export const useAuthStore = create<AuthStore>()(
       loadAuthState: async () => {
         try {
           set({ isLoading: true });
-          const token = await AsyncStorage.getItem("authToken");
-          if (token) {
-            set({ token, isLoading: false, isAuthenticated: true });
-          } else {
-            set({ isLoading: false, isAuthenticated: false });
+          await tokenManager.loadTokensFromStorage();
+
+          const token = await tokenManager.getValidToken();
+
+          if (!token) {
+            set({ isLoading: false, isAuthenticated: false, token: null });
+            return;
           }
+
+          try {
+            const response = await apiClient.get<{
+              user: {
+                id: string | number;
+                name: string;
+                email: string;
+                avatar?: string;
+                avatar_url?: string;
+                preferences?: Record<string, any>;
+              };
+            }>("/auth/v2/me");
+
+            if (response.user) {
+              set({
+                token: AUTH_TOKEN_MARKER,
+                user: normalizeUser(response.user),
+                isLoading: false,
+                isAuthenticated: true,
+              });
+              return;
+            }
+          } catch (error) {
+            if (error instanceof ApiError && error.status === 401) {
+              await tokenManager.clearTokens();
+              set({
+                token: null,
+                user: null,
+                isLoading: false,
+                isAuthenticated: false,
+              });
+              return;
+            }
+
+            const currentUser = get().user;
+            set({
+              token: AUTH_TOKEN_MARKER,
+              user: currentUser,
+              isLoading: false,
+              isAuthenticated: true,
+            });
+            return;
+          }
+
+          const currentUser = get().user;
+          set({
+            token: AUTH_TOKEN_MARKER,
+            user: currentUser,
+            isLoading: false,
+            isAuthenticated: true,
+          });
         } catch (error) {
-          console.error("Failed to load auth state:", error);
+          console.log("[AUTH] Failed to load auth state:", error);
           set({ isLoading: false, isAuthenticated: false });
         }
       },
@@ -120,12 +196,27 @@ export const useAuthStore = create<AuthStore>()(
       name: "auth-storage",
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
-        token: state.token,
         user: state.user,
-        isAuthenticated: state.isAuthenticated,
       }),
     },
   ),
 );
+
+tokenManager.subscribe((authenticated) => {
+  if (!authenticated) {
+    useAuthStore.setState({
+      token: null,
+      user: null,
+      isAuthenticated: false,
+    });
+    return;
+  }
+
+  useAuthStore.setState((state) => ({
+    token: AUTH_TOKEN_MARKER,
+    isAuthenticated: true,
+    user: state.user,
+  }));
+});
 
 export default useAuthStore;

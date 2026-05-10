@@ -15,13 +15,15 @@ import axios, {
   AxiosRequestConfig,
   InternalAxiosRequestConfig,
 } from "axios";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
 // ─────────────────────────────────────────────────────────────
 // CONFIGURATION
 // ─────────────────────────────────────────────────────────────
 import { API_BASE_URL, API_TIMEOUT } from "@/constants/config";
+import { tokenManager } from "./tokenManager";
+
+export type RequestConfig = AxiosRequestConfig & { skipRetry?: boolean };
 
 // Retry configuration
 const MAX_RETRIES = 3;
@@ -95,7 +97,7 @@ class ApiService {
         }
 
         try {
-          const token = await AsyncStorage.getItem("authToken");
+          const token = await tokenManager.getValidToken();
           if (token) {
             config.headers.Authorization = `Bearer ${token}`;
             log("  Added auth token to request");
@@ -133,7 +135,7 @@ class ApiService {
         if (error.response?.status === 401) {
           log("  401 Unauthorized - clearing auth token");
           try {
-            await AsyncStorage.removeItem("authToken");
+            await tokenManager.clearTokens();
           } catch (err) {
             logError("Failed to clear auth token:", err);
           }
@@ -254,14 +256,24 @@ class ApiService {
     method: "get" | "post" | "put" | "delete" | "patch",
     path: string,
     data?: any,
-    config?: AxiosRequestConfig & { skipRetry?: boolean },
+    config?: RequestConfig,
   ): Promise<T> {
     const maxRetries = config?.skipRetry ? 0 : MAX_RETRIES;
     let lastError: Error | null = null;
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
-        const response = await this.client[method](path, data, config);
+        let response;
+
+        if (method === "get" || method === "delete") {
+          response = await this.client[method](
+            path,
+            config as AxiosRequestConfig,
+          );
+        } else {
+          response = await this.client[method](path, data, config);
+        }
+
         return response.data;
       } catch (error: any) {
         lastError = error;
@@ -337,35 +349,23 @@ class ApiService {
     );
   }
 
-  async get<T>(path: string, config?: AxiosRequestConfig): Promise<T> {
+  async get<T>(path: string, config?: RequestConfig): Promise<T> {
     return this.request("get", path, undefined, config);
   }
 
-  async post<T>(
-    path: string,
-    data: any,
-    config?: AxiosRequestConfig,
-  ): Promise<T> {
+  async post<T>(path: string, data: any, config?: RequestConfig): Promise<T> {
     return this.request("post", path, data, config);
   }
 
-  async put<T>(
-    path: string,
-    data: any,
-    config?: AxiosRequestConfig,
-  ): Promise<T> {
+  async put<T>(path: string, data: any, config?: RequestConfig): Promise<T> {
     return this.request("put", path, data, config);
   }
 
-  async delete<T>(path: string, config?: AxiosRequestConfig): Promise<T> {
+  async delete<T>(path: string, config?: RequestConfig): Promise<T> {
     return this.request("delete", path, undefined, config);
   }
 
-  async patch<T>(
-    path: string,
-    data: any,
-    config?: AxiosRequestConfig,
-  ): Promise<T> {
+  async patch<T>(path: string, data: any, config?: RequestConfig): Promise<T> {
     return this.request("patch", path, data, config);
   }
 

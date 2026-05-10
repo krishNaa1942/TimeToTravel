@@ -3,11 +3,26 @@
  * Centralized navigation param lists with full type safety
  */
 
-import { Destination } from '@/types';
-import { NavigatorScreenParams } from '@react-navigation/native';
-import { CompositeNavigationProp, RouteProp } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { Destination } from "@/types";
+import { NavigatorScreenParams } from "@react-navigation/native";
+import { CompositeNavigationProp, RouteProp } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
+
+export interface CompareRouteParams {
+  dest1?: string;
+  dest2?: string;
+  days?: number;
+  familySize?: number;
+  travelClass?: string;
+  priority?:
+    | "budget"
+    | "safety"
+    | "weather"
+    | "balanced"
+    | "crowd"
+    | "experience";
+}
 
 // ── Auth Stack (Unauthenticated flows) ─────────────────────────
 export type AuthStackParamList = {
@@ -45,7 +60,7 @@ export type ExploreStackParamList = {
   ExploreMain: undefined;
   DestinationDetail: { destination: Destination };
   Places: { destination?: Destination };
-  Compare: undefined;
+  Compare: CompareRouteParams | undefined;
   Favorites: undefined;
 };
 
@@ -71,23 +86,23 @@ export type SettingsStackParamList = {
 export type RootStackParamList = {
   // Auth flows
   Auth: undefined;
-  
+
   // Main app
   MainApp: undefined;
-  
+
   // Feature stacks (modal presentation)
   TripStack: NavigatorScreenParams<TripStackParamList>;
   ExploreStack: NavigatorScreenParams<ExploreStackParamList>;
   SocialStack: NavigatorScreenParams<SocialStackParamList>;
   SettingsStack: NavigatorScreenParams<SettingsStackParamList>;
-  
+
   // Direct deep link targets
   DestinationDetail: { destination: Destination };
   SharedTrip: { shareToken: string };
-  
+
   // Modals
   CurrencyModal: undefined;
-  
+
   // Error states
   NetworkError: undefined;
 };
@@ -102,7 +117,7 @@ export type BottomTabParamList = {
 };
 
 // ── Route Protection Levels ─────────────────────────────────────
-export type RouteProtection = 'public' | 'authenticated' | 'premium' | 'admin';
+export type RouteProtection = "public" | "authenticated" | "premium" | "admin";
 
 // ── Navigation Route Config ─────────────────────────────────────
 export interface RouteConfig {
@@ -123,7 +138,8 @@ export interface DeepLinkConfig {
 // ── Helper Types ────────────────────────────────────────────────
 
 // Type for root navigation prop
-export type RootStackNavigationProp = NativeStackNavigationProp<RootStackParamList>;
+export type RootStackNavigationProp =
+  NativeStackNavigationProp<RootStackParamList>;
 
 // Type for tab navigation prop
 export type TabNavigationProp = BottomTabNavigationProp<MainTabParamList>;
@@ -157,7 +173,7 @@ export interface AuthNavigationState {
   isLoading: boolean;
   isAuthenticated: boolean;
   isOnboarded: boolean;
-  userRole?: 'free' | 'premium' | 'admin';
+  userRole?: "free" | "premium" | "admin";
 }
 
 // ── Navigation Event Types for Analytics ────────────────────────
