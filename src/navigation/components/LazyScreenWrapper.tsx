@@ -1,7 +1,7 @@
 /**
  * 🧩 LAZY SCREEN WRAPPER
  * Enterprise-grade lazy loading with retry, skeleton, and error handling
- * 
+ *
  * FEATURES:
  * - Automatic retry on import failure
  * - Skeleton loader while loading
@@ -10,13 +10,26 @@
  * - Analytics tracking
  */
 
-import React, { ComponentType, Suspense, useEffect, useState, useCallback, memo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import React, {
+  ComponentType,
+  Suspense,
+  useEffect,
+  useState,
+  useCallback,
+  memo,
+} from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Animated,
+} from "react-native";
+import { useNavigation } from "@react-navigation/native";
 
-import { NavigationErrorBoundary } from './NavigationErrorBoundary';
-import { ScreenSkeletonLoader } from './ScreenSkeletonLoader';
-import { navigationAnalytics } from '../utils/NavigationAnalytics';
+import { NavigationErrorBoundary } from "./NavigationErrorBoundary";
+import { ScreenSkeletonLoader } from "./ScreenSkeletonLoader";
+import { NavigationAnalytics as navigationAnalytics } from "../utils/NavigationAnalytics";
 
 // ─────────────────────────────────────────────────────────────
 // TYPES
@@ -52,15 +65,15 @@ interface LazyState {
 // RETRY INDICATOR COMPONENT
 // ─────────────────────────────────────────────────────────────
 
-const RetryIndicator = memo(function RetryIndicator({ 
-  retryCount, 
-  maxRetries 
-}: { 
-  retryCount: number; 
-  maxRetries: number; 
+const RetryIndicator = memo(function RetryIndicator({
+  retryCount,
+  maxRetries,
+}: {
+  retryCount: number;
+  maxRetries: number;
 }) {
   if (retryCount === 0) return null;
-  
+
   return (
     <View style={styles.retryIndicator}>
       <Text style={styles.retryText}>
@@ -77,7 +90,7 @@ const RetryIndicator = memo(function RetryIndicator({
 export const LazyScreenWrapper = memo(function LazyScreenWrapper({
   loader,
   screenName,
-  stackName = 'Unknown',
+  stackName = "Unknown",
   SkeletonComponent,
   retryAttempts = 3,
   trackAnalytics = true,
@@ -94,38 +107,48 @@ export const LazyScreenWrapper = memo(function LazyScreenWrapper({
   const navigation = useNavigation();
 
   // Load the component
-  const loadComponent = useCallback(async (isRetry = false) => {
-    if (isRetry) {
-      setState(prev => ({ ...prev, isRetrying: true }));
-    }
-
-    try {
-      const module = await loader();
-      
-      setState(prev => ({
-        ...prev,
-        Component: module.default,
-        error: null,
-        retryCount: 0,
-        isRetrying: false,
-      }));
-
-      if (trackAnalytics) {
-        navigationAnalytics.trackScreenLoaded(screenName, stackName);
+  const loadComponent = useCallback(
+    async (isRetry = false) => {
+      if (isRetry) {
+        setState((prev) => ({ ...prev, isRetrying: true }));
       }
-    } catch (error) {
-      setState(prev => ({
-        ...prev,
-        error: error as Error,
-        retryCount: isRetry ? prev.retryCount + 1 : 1,
-        isRetrying: false,
-      }));
 
-      if (trackAnalytics) {
-        navigationAnalytics.trackScreenLoadError(screenName, stackName, error as Error);
+      try {
+        const module = await loader();
+
+        setState((prev) => ({
+          ...prev,
+          Component: module.default,
+          error: null,
+          retryCount: 0,
+          isRetrying: false,
+        }));
+
+        if (trackAnalytics) {
+          navigationAnalytics.logEvent("screen_loaded", {
+            screenName,
+            stackName,
+          });
+        }
+      } catch (error) {
+        setState((prev) => ({
+          ...prev,
+          error: error as Error,
+          retryCount: isRetry ? prev.retryCount + 1 : 1,
+          isRetrying: false,
+        }));
+
+        if (trackAnalytics) {
+          navigationAnalytics.logEvent("screen_load_error", {
+            screenName,
+            stackName,
+            error: (error as Error).message,
+          });
+        }
       }
-    }
-  }, [loader, screenName, stackName, trackAnalytics]);
+    },
+    [loader, screenName, stackName, trackAnalytics],
+  );
 
   // Auto-retry logic
   const handleRetry = useCallback(() => {
@@ -138,9 +161,10 @@ export const LazyScreenWrapper = memo(function LazyScreenWrapper({
 
   // Initial load
   useEffect(() => {
-    const timeoutId = preloadDelay > 0 
-      ? setTimeout(() => loadComponent(), preloadDelay)
-      : undefined;
+    const timeoutId =
+      preloadDelay > 0
+        ? setTimeout(() => loadComponent(), preloadDelay)
+        : undefined;
 
     if (!timeoutId) {
       loadComponent();
@@ -160,7 +184,7 @@ export const LazyScreenWrapper = memo(function LazyScreenWrapper({
 
   // Manual retry handler
   const onManualRetry = useCallback(() => {
-    setState(prev => ({ ...prev, retryCount: 0 }));
+    setState((prev) => ({ ...prev, retryCount: 0 }));
     loadComponent();
   }, [loadComponent]);
 
@@ -170,7 +194,12 @@ export const LazyScreenWrapper = memo(function LazyScreenWrapper({
     return (
       <View style={styles.container}>
         <Skeleton />
-        {state.isRetrying && <RetryIndicator retryCount={state.retryCount} maxRetries={retryAttempts} />}
+        {state.isRetrying && (
+          <RetryIndicator
+            retryCount={state.retryCount}
+            maxRetries={retryAttempts}
+          />
+        )}
       </View>
     );
   }
@@ -188,9 +217,15 @@ export const LazyScreenWrapper = memo(function LazyScreenWrapper({
   }
 
   // Success - render the loaded component
+  const LoadedComponent = state.Component;
+
+  if (!LoadedComponent) {
+    return null;
+  }
+
   return (
     <NavigationErrorBoundary screenName={screenName} stackName={stackName}>
-      <state.Component {...screenProps} />
+      <LoadedComponent {...screenProps} />
     </NavigationErrorBoundary>
   );
 });
@@ -202,19 +237,19 @@ export const LazyScreenWrapper = memo(function LazyScreenWrapper({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: "#0F172A",
   },
   retryIndicator: {
-    position: 'absolute',
+    position: "absolute",
     top: 60,
     left: 0,
     right: 0,
-    alignItems: 'center',
+    alignItems: "center",
   },
   retryText: {
-    color: '#94A3B8',
+    color: "#94A3B8",
     fontSize: 12,
-    fontFamily: 'Inter-Medium',
+    fontFamily: "Inter-Medium",
   },
 });
 

@@ -1,5 +1,5 @@
 import React, { memo } from "react";
-import { StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Text } from "react-native-paper";
@@ -19,6 +19,15 @@ export const AuthHero = memo(function AuthHero({
     ? "Offline mode - limited access"
     : "Encrypted and private";
   const trustIcon = offline ? "wifi-off" : "shield-check-outline";
+  const brandMarkShadow = Platform.select({
+    web: { boxShadow: "0px 8px 24px rgba(15, 23, 42, 0.16)" } as any,
+    default: {
+      shadowColor: "#0F172A",
+      shadowOpacity: 0.16,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 8 },
+    },
+  });
 
   return (
     <View style={styles.container}>
@@ -28,7 +37,7 @@ export const AuthHero = memo(function AuthHero({
             colors={[colors.primary, colors.info]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={styles.brandMark}
+            style={[styles.brandMark, brandMarkShadow]}
           >
             <MaterialCommunityIcons
               name="compass-outline"
@@ -85,10 +94,6 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#0F172A",
-    shadowOpacity: 0.16,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 8 },
     elevation: 6,
   },
   brandCopy: {

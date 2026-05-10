@@ -374,13 +374,13 @@ export function useBudgetPlanner({
       savedAt: Date.now(),
       formData,
       estimate,
-      insights,
+      insights: buildInsights(estimate),
     };
 
     void persistSnapshot(snapshot);
 
     return persistSnapshot.cancel;
-  }, [estimate, formData, insights, isRestoring, persistSnapshot]);
+  }, [estimate, formData, isRestoring, persistSnapshot]);
 
   // Update single field
   const updateField = useCallback(

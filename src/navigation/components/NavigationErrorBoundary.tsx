@@ -1,7 +1,7 @@
 /**
  * 🛡️ NAVIGATION ERROR BOUNDARY
  * Enterprise-grade error handling for navigation
- * 
+ *
  * FEATURES:
  * - Catches JavaScript errors in navigation tree
  * - Retry functionality
@@ -9,16 +9,22 @@
  * - Error logging and analytics
  */
 
-import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
-import { useNavigation, CommonActions } from '@react-navigation/native';
+import React, { Component, ErrorInfo, ReactNode } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Animated,
+} from "react-native";
+import { useNavigation, CommonActions } from "@react-navigation/native";
 
 // ─────────────────────────────────────────────────────────────
 // TYPES
 // ─────────────────────────────────────────────────────────────
 
 interface Props {
-  children: ReactNode;
+  children?: ReactNode;
   screenName?: string;
   stackName?: string;
   error?: Error | null;
@@ -43,7 +49,12 @@ interface ErrorFallbackProps {
   onGoHome: () => void;
 }
 
-function ErrorFallback({ error, screenName, onRetry, onGoHome }: ErrorFallbackProps) {
+function ErrorFallback({
+  error,
+  screenName,
+  onRetry,
+  onGoHome,
+}: ErrorFallbackProps) {
   const scaleAnim = React.useRef(new Animated.Value(0.9)).current;
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
 
@@ -65,10 +76,10 @@ function ErrorFallback({ error, screenName, onRetry, onGoHome }: ErrorFallbackPr
 
   return (
     <View style={styles.container}>
-      <Animated.View 
+      <Animated.View
         style={[
           styles.content,
-          { transform: [{ scale: scaleAnim }], opacity: fadeAnim }
+          { transform: [{ scale: scaleAnim }], opacity: fadeAnim },
         ]}
       >
         {/* Error Icon */}
@@ -96,7 +107,7 @@ function ErrorFallback({ error, screenName, onRetry, onGoHome }: ErrorFallbackPr
           <TouchableOpacity style={styles.retryButton} onPress={onRetry}>
             <Text style={styles.retryButtonText}>Try Again</Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity style={styles.homeButton} onPress={onGoHome}>
             <Text style={styles.homeButtonText}>Go Home</Text>
           </TouchableOpacity>
@@ -127,7 +138,7 @@ export class NavigationErrorBoundary extends Component<Props, State> {
   static getDerivedStateFromProps(props: Props, state: State): State | null {
     // If error prop changed, update state
     if (props.error && !state.error) {
-      return { hasError: true, error: props.error };
+      return { hasError: true, error: props.error, errorInfo: null };
     }
     return null;
   }
@@ -136,7 +147,7 @@ export class NavigationErrorBoundary extends Component<Props, State> {
     this.setState({ errorInfo });
 
     // Log error
-    console.error('🚨 Navigation Error:', {
+    console.error("🚨 Navigation Error:", {
       screen: this.props.screenName,
       stack: this.props.stackName,
       error: error.message,
@@ -156,14 +167,14 @@ export class NavigationErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         <ErrorBoundaryNavigationHandler
-          screenName={this.props.screenName || 'Unknown'}
+          screenName={this.props.screenName || "Unknown"}
           error={this.state.error}
           onRetry={this.handleRetry}
         />
       );
     }
 
-    return this.props.children;
+    return this.props.children ?? null;
   }
 }
 
@@ -186,8 +197,8 @@ function ErrorBoundaryNavigationHandler({
     navigation.dispatch(
       CommonActions.reset({
         index: 0,
-        routes: [{ name: 'MainApp' }],
-      })
+        routes: [{ name: "MainApp" }],
+      }),
     );
   }, [navigation]);
 
@@ -208,22 +219,22 @@ function ErrorBoundaryNavigationHandler({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#0F172A",
+    justifyContent: "center",
+    alignItems: "center",
     padding: 24,
   },
   content: {
-    alignItems: 'center',
+    alignItems: "center",
     maxWidth: 320,
   },
   iconContainer: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(239, 68, 68, 0.1)",
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 24,
   },
   iconText: {
@@ -231,58 +242,58 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    textAlign: 'center',
+    fontWeight: "700",
+    color: "#FFFFFF",
+    textAlign: "center",
     marginBottom: 8,
-    fontFamily: 'Inter-Bold',
+    fontFamily: "Inter-Bold",
   },
   subtitle: {
     fontSize: 14,
-    color: '#94A3B8',
-    textAlign: 'center',
+    color: "#94A3B8",
+    textAlign: "center",
     marginBottom: 24,
-    fontFamily: 'Inter-Regular',
+    fontFamily: "Inter-Regular",
   },
   errorDetails: {
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    backgroundColor: "rgba(239, 68, 68, 0.1)",
     borderRadius: 8,
     padding: 12,
     marginBottom: 24,
-    width: '100%',
+    width: "100%",
   },
   errorText: {
     fontSize: 12,
-    color: '#EF4444',
-    fontFamily: 'monospace',
+    color: "#EF4444",
+    fontFamily: "monospace",
   },
   buttonContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
   },
   retryButton: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: "#3B82F6",
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
   },
   retryButtonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 14,
-    fontWeight: '600',
-    fontFamily: 'Inter-SemiBold',
+    fontWeight: "600",
+    fontFamily: "Inter-SemiBold",
   },
   homeButton: {
-    backgroundColor: 'rgba(148, 163, 184, 0.1)',
+    backgroundColor: "rgba(148, 163, 184, 0.1)",
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
   },
   homeButtonText: {
-    color: '#94A3B8',
+    color: "#94A3B8",
     fontSize: 14,
-    fontWeight: '600',
-    fontFamily: 'Inter-SemiBold',
+    fontWeight: "600",
+    fontFamily: "Inter-SemiBold",
   },
 });
 

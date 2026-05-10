@@ -203,7 +203,10 @@ function simplifyCoordinates(
 }
 
 function normalizeSegmentCoordinates(
-  segment: Partial<ItineraryRouteSegment> & { coordinates?: Coordinate[] },
+  segment: Partial<ItineraryRouteSegment> & {
+    coordinates?: Coordinate[];
+    encodedPolyline?: string;
+  },
   fallbackStart: MapCoordinate,
   fallbackEnd: MapCoordinate,
 ): MapCoordinate[] {
@@ -234,7 +237,10 @@ function normalizeSegmentCoordinates(
 
 function routeSegmentToMapSegment(
   route: DayRoute,
-  segment: ItineraryRouteSegment,
+  segment: ItineraryRouteSegment & {
+    id?: string;
+    encodedPolyline?: string;
+  },
   index: number,
 ): DayRoute["segments"][number] {
   const coordinates = normalizeSegmentCoordinates(

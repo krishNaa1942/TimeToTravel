@@ -1,7 +1,7 @@
 /**
  * ExploreScreen V5 – AI-Powered Intelligent Discovery Engine
  * World-class travel discovery competing with Airbnb, Google Travel, MakeMyTrip
- * 
+ *
  * Features:
  * - FlashList for 60fps smooth scrolling
  * - AI-powered personalization engine
@@ -14,7 +14,14 @@
  * - Micro-interactions & haptic feedback
  */
 
-import React, { useState, useMemo, useCallback, useRef, useEffect, memo } from "react";
+import React, {
+  useState,
+  useMemo,
+  useCallback,
+  useRef,
+  useEffect,
+  memo,
+} from "react";
 import {
   View,
   StyleSheet,
@@ -41,7 +48,10 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import LoadingSpinner from "@/components/Common/LoadingSpinner";
 import ErrorMessage from "@/components/Common/ErrorMessage";
 import DestinationCard from "@/components/Features/DestinationCard";
-import { useDestinations, useSearchDestinations } from "@/api/queries/useDestinations";
+import {
+  useDestinations,
+  useSearchDestinations,
+} from "@/api/queries/useDestinations";
 import { destinationsService } from "@/services/destinations";
 import { Destination, RootStackParamList, UnsplashImage } from "@/types";
 import { colors, spacing } from "@/theme/colors";
@@ -76,7 +86,14 @@ interface AIInsight {
 interface FilterState {
   budget: "all" | "budget" | "mid" | "luxury";
   duration: "all" | "weekend" | "week" | "extended";
-  vibe: "all" | "adventure" | "relaxation" | "cultural" | "romantic" | "family" | "spiritual";
+  vibe:
+    | "all"
+    | "adventure"
+    | "relaxation"
+    | "cultural"
+    | "romantic"
+    | "family"
+    | "spiritual";
   season: "all" | "summer" | "winter" | "monsoon" | "spring";
 }
 
@@ -93,12 +110,48 @@ interface CategoryConfig {
 // ─────────────────────────────────────────────────────────────
 
 const CATEGORIES: CategoryConfig[] = [
-  { id: "all", label: "For You", icon: "star-four-points", color: "#8B5CF6", gradient: ["#8B5CF6", "#6366F1"] },
-  { id: "beach", label: "Beaches", icon: "beach", color: "#0EA5E9", gradient: ["#0EA5E9", "#06B6D4"] },
-  { id: "mountain", label: "Mountains", icon: "image-filter-hdr", color: "#10B981", gradient: ["#10B981", "#059669"] },
-  { id: "city", label: "Cities", icon: "city-variant", color: "#F59E0B", gradient: ["#F59E0B", "#D97706"] },
-  { id: "spiritual", label: "Spiritual", icon: "temple-buddhist", color: "#EC4899", gradient: ["#EC4899", "#DB2777"] },
-  { id: "adventure", label: "Adventure", icon: "hiking", color: "#EF4444", gradient: ["#EF4444", "#DC2626"] },
+  {
+    id: "all",
+    label: "For You",
+    icon: "star-four-points",
+    color: "#8B5CF6",
+    gradient: ["#8B5CF6", "#6366F1"],
+  },
+  {
+    id: "beach",
+    label: "Beaches",
+    icon: "beach",
+    color: "#0EA5E9",
+    gradient: ["#0EA5E9", "#06B6D4"],
+  },
+  {
+    id: "mountain",
+    label: "Mountains",
+    icon: "image-filter-hdr",
+    color: "#10B981",
+    gradient: ["#10B981", "#059669"],
+  },
+  {
+    id: "city",
+    label: "Cities",
+    icon: "city-variant",
+    color: "#F59E0B",
+    gradient: ["#F59E0B", "#D97706"],
+  },
+  {
+    id: "spiritual",
+    label: "Spiritual",
+    icon: "temple-buddhist",
+    color: "#EC4899",
+    gradient: ["#EC4899", "#DB2777"],
+  },
+  {
+    id: "adventure",
+    label: "Adventure",
+    icon: "hiking",
+    color: "#EF4444",
+    gradient: ["#EF4444", "#DC2626"],
+  },
 ];
 
 const CURRENT_SEASON = (() => {
@@ -115,18 +168,26 @@ const CURRENT_SEASON = (() => {
 
 const analyzeSearchIntent = (query: string): SearchIntent => {
   const q = query.toLowerCase().trim();
-  
+
   // Activity-based intent
   if (/\b(swim|surf|beach|sunbathe|scuba|snorkel)\b/.test(q)) {
     return { type: "activity", confidence: 0.9, entities: ["beach", "water"] };
   }
   if (/\b(trek|hike|climb|camp|adventure)\b/.test(q)) {
-    return { type: "activity", confidence: 0.9, entities: ["mountain", "adventure"] };
+    return {
+      type: "activity",
+      confidence: 0.9,
+      entities: ["mountain", "adventure"],
+    };
   }
   if (/\b(temple|spiritual|meditation|yoga|peace)\b/.test(q)) {
-    return { type: "vibe", confidence: 0.85, entities: ["spiritual", "peaceful"] };
+    return {
+      type: "vibe",
+      confidence: 0.85,
+      entities: ["spiritual", "peaceful"],
+    };
   }
-  
+
   // Budget intent
   if (/\b(cheap|budget|affordable|low cost)\b/.test(q)) {
     return { type: "budget", confidence: 0.8, entities: ["budget"] };
@@ -134,7 +195,7 @@ const analyzeSearchIntent = (query: string): SearchIntent => {
   if (/\b(luxury|premium|expensive|high-end)\b/.test(q)) {
     return { type: "budget", confidence: 0.8, entities: ["luxury"] };
   }
-  
+
   // Season intent
   if (/\b(summer|hot|sunny)\b/.test(q)) {
     return { type: "season", confidence: 0.75, entities: ["summer"] };
@@ -145,7 +206,7 @@ const analyzeSearchIntent = (query: string): SearchIntent => {
   if (/\b(monsoon|rain|romantic)\b/.test(q)) {
     return { type: "season", confidence: 0.75, entities: ["monsoon"] };
   }
-  
+
   // Vibe intent
   if (/\b(romantic|honymoon|couple)\b/.test(q)) {
     return { type: "vibe", confidence: 0.85, entities: ["romantic", "couple"] };
@@ -156,37 +217,53 @@ const analyzeSearchIntent = (query: string): SearchIntent => {
   if (/\b(solo|alone|backpack)\b/.test(q)) {
     return { type: "vibe", confidence: 0.8, entities: ["solo", "adventure"] };
   }
-  
+
   return { type: "destination", confidence: 0.6, entities: [q] };
 };
 
 const calculateDestinationScore = (
   dest: Destination,
   filters: FilterState,
-  searchIntent?: SearchIntent
+  searchIntent?: SearchIntent,
 ): number => {
   let score = 50; // Base score
-  
+
   // Season bonus
-  const destStr = `${dest.label} ${dest.region} ${dest.tagline || ""}`.toLowerCase();
-  
+  const destStr =
+    `${dest.label} ${dest.region} ${dest.tagline || ""}`.toLowerCase();
+
   if (CURRENT_SEASON === "summer" && /beach|coast|goa|andaman/.test(destStr)) {
     score += 20;
-  } else if (CURRENT_SEASON === "winter" && /mountain|hill|snow|manali|shimla/.test(destStr)) {
+  } else if (
+    CURRENT_SEASON === "winter" &&
+    /mountain|hill|snow|manali|shimla/.test(destStr)
+  ) {
     score += 20;
-  } else if (CURRENT_SEASON === "monsoon" && /hill|green|kerala|coorg/.test(destStr)) {
+  } else if (
+    CURRENT_SEASON === "monsoon" &&
+    /hill|green|kerala|coorg/.test(destStr)
+  ) {
     score += 15;
   }
-  
+
   // Filter matching
-  if (filters.vibe === "adventure" && /trek|hike|adventure|mountain/.test(destStr)) {
+  if (
+    filters.vibe === "adventure" &&
+    /trek|hike|adventure|mountain/.test(destStr)
+  ) {
     score += 25;
-  } else if (filters.vibe === "relaxation" && /beach|resort|spa|backwater/.test(destStr)) {
+  } else if (
+    filters.vibe === "relaxation" &&
+    /beach|resort|spa|backwater/.test(destStr)
+  ) {
     score += 25;
-  } else if (filters.vibe === "spiritual" && /temple|spiritual|varanasi|rishikesh/.test(destStr)) {
+  } else if (
+    filters.vibe === "spiritual" &&
+    /temple|spiritual|varanasi|rishikesh/.test(destStr)
+  ) {
     score += 25;
   }
-  
+
   // Search intent matching
   if (searchIntent?.entities) {
     for (const entity of searchIntent.entities) {
@@ -195,7 +272,7 @@ const calculateDestinationScore = (
       }
     }
   }
-  
+
   return Math.min(score, 100);
 };
 
@@ -215,38 +292,52 @@ interface CategoryPillProps {
   onPress: () => void;
 }
 
-const CategoryPill = memo(({ category, isActive, onPress }: CategoryPillProps) => {
-  const scaleAnim = useRef(new Animated.Value(1)).current;
+const CategoryPill = memo(
+  ({ category, isActive, onPress }: CategoryPillProps) => {
+    const scaleAnim = useRef(new Animated.Value(1)).current;
 
-  const handlePress = () => {
-    Animated.sequence([
-      Animated.timing(scaleAnim, { toValue: 0.95, duration: 50, useNativeDriver: true }),
-      Animated.spring(scaleAnim, { toValue: 1, tension: 300, friction: 20, useNativeDriver: true }),
-    ]).start();
-    onPress();
-  };
+    const handlePress = () => {
+      Animated.sequence([
+        Animated.timing(scaleAnim, {
+          toValue: 0.95,
+          duration: 50,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          tension: 300,
+          friction: 20,
+          useNativeDriver: true,
+        }),
+      ]).start();
+      onPress();
+    };
 
-  return (
-    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-      <PressableScale
-        style={[
-          styles.categoryPill,
-          isActive && { backgroundColor: category.color, borderColor: category.color },
-        ]}
-        onPress={handlePress}
-      >
-        <MaterialCommunityIcons
-          name={category.icon as any}
-          size={16}
-          color={isActive ? "#FFF" : category.color}
-        />
-        <Text style={[styles.categoryText, isActive && { color: "#FFF" }]}>
-          {category.label}
-        </Text>
-      </PressableScale>
-    </Animated.View>
-  );
-});
+    return (
+      <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+        <PressableScale
+          style={[
+            styles.categoryPill,
+            isActive && {
+              backgroundColor: category.color,
+              borderColor: category.color,
+            },
+          ]}
+          onPress={handlePress}
+        >
+          <MaterialCommunityIcons
+            name={category.icon as any}
+            size={16}
+            color={isActive ? "#FFF" : category.color}
+          />
+          <Text style={[styles.categoryText, isActive && { color: "#FFF" }]}>
+            {category.label}
+          </Text>
+        </PressableScale>
+      </Animated.View>
+    );
+  },
+);
 CategoryPill.displayName = "CategoryPill";
 
 // ─────────────────────────────────────────────────────────────
@@ -257,57 +348,70 @@ interface InsightCardProps {
   onDestinationPress: (dest: Destination) => void;
 }
 
-const InsightCard = memo(({ insight, getImageUrl, onDestinationPress }: InsightCardProps) => {
-  const scrollRef = useRef<FlashList<Destination>>(null);
+const InsightCard = memo(
+  ({ insight, getImageUrl, onDestinationPress }: InsightCardProps) => {
+    const scrollRef = useRef<any>(null);
 
-  return (
-    <View style={styles.insightSection}>
-      <View style={styles.insightHeader}>
-        <View style={styles.insightTitleRow}>
-          <MaterialCommunityIcons
-            name={
-              insight.type === "trending" ? "fire" :
-              insight.type === "seasonal" ? "weather-sunny" :
-              insight.type === "personalized" ? "heart" : "star-four-points"
-            }
-            size={20}
-            color={
-              insight.type === "trending" ? "#EF4444" :
-              insight.type === "seasonal" ? "#F59E0B" :
-              insight.type === "personalized" ? "#EC4899" : "#8B5CF6"
-            }
-          />
-          <Text style={styles.insightTitle}>{insight.title}</Text>
-        </View>
-        <Text style={styles.insightSubtitle}>{insight.subtitle}</Text>
-        {insight.reason && (
-          <View style={styles.insightReason}>
-            <MaterialCommunityIcons name="lightbulb-outline" size={12} color="#64748B" />
-            <Text style={styles.insightReasonText}>{insight.reason}</Text>
+    return (
+      <View style={styles.insightSection}>
+        <View style={styles.insightHeader}>
+          <View style={styles.insightTitleRow}>
+            <MaterialCommunityIcons
+              name={
+                insight.type === "trending"
+                  ? "fire"
+                  : insight.type === "seasonal"
+                    ? "weather-sunny"
+                    : insight.type === "personalized"
+                      ? "heart"
+                      : "star-four-points"
+              }
+              size={20}
+              color={
+                insight.type === "trending"
+                  ? "#EF4444"
+                  : insight.type === "seasonal"
+                    ? "#F59E0B"
+                    : insight.type === "personalized"
+                      ? "#EC4899"
+                      : "#8B5CF6"
+              }
+            />
+            <Text style={styles.insightTitle}>{insight.title}</Text>
           </View>
-        )}
+          <Text style={styles.insightSubtitle}>{insight.subtitle}</Text>
+          {insight.reason && (
+            <View style={styles.insightReason}>
+              <MaterialCommunityIcons
+                name="lightbulb-outline"
+                size={12}
+                color="#64748B"
+              />
+              <Text style={styles.insightReasonText}>{insight.reason}</Text>
+            </View>
+          )}
+        </View>
+
+        <FlashList
+          ref={scrollRef}
+          horizontal
+          data={insight.destinations}
+          keyExtractor={(d) => d.id}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.insightListContent}
+          renderItem={({ item }) => (
+            <DestinationCard
+              destination={item}
+              imageUrl={getImageUrl(item)}
+              onPress={() => onDestinationPress(item)}
+              horizontal
+            />
+          )}
+        />
       </View>
-      
-      <FlashList
-        ref={scrollRef}
-        horizontal
-        data={insight.destinations}
-        keyExtractor={(d) => d.id}
-        estimatedItemSize={CARD_WIDTH + spacing.md}
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.insightListContent}
-        renderItem={({ item }) => (
-          <DestinationCard
-            destination={item}
-            imageUrl={getImageUrl(item)}
-            onPress={() => onDestinationPress(item)}
-            horizontal
-          />
-        )}
-      />
-    </View>
-  );
-});
+    );
+  },
+);
 InsightCard.displayName = "InsightCard";
 
 // ─────────────────────────────────────────────────────────────
@@ -318,67 +422,120 @@ interface FilterChipsProps {
 }
 
 const FilterChips = memo(({ filters, onFilterChange }: FilterChipsProps) => {
-  const activeCount = Object.values(filters).filter(v => v !== "all").length;
+  const activeCount = Object.values(filters).filter((v) => v !== "all").length;
 
   return (
     <View style={styles.filterChipsContainer}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChipsScroll}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filterChipsScroll}
+      >
         {/* Budget Filter */}
         <PressableScale
-          style={[styles.filterChip, filters.budget !== "all" && styles.filterChipActive]}
-          onPress={() => onFilterChange("budget", filters.budget === "all" ? "budget" : "all")}
+          style={[
+            styles.filterChip,
+            filters.budget !== "all" && styles.filterChipActive,
+          ]}
+          onPress={() =>
+            onFilterChange(
+              "budget",
+              filters.budget === "all" ? "budget" : "all",
+            )
+          }
         >
           <MaterialCommunityIcons
             name="currency-inr"
             size={14}
             color={filters.budget !== "all" ? "#FFF" : "#64748B"}
           />
-          <Text style={[styles.filterChipText, filters.budget !== "all" && { color: "#FFF" }]}>
+          <Text
+            style={[
+              styles.filterChipText,
+              filters.budget !== "all" && { color: "#FFF" },
+            ]}
+          >
             {filters.budget === "all" ? "Budget" : filters.budget}
           </Text>
         </PressableScale>
 
         {/* Duration Filter */}
         <PressableScale
-          style={[styles.filterChip, filters.duration !== "all" && styles.filterChipActive]}
-          onPress={() => onFilterChange("duration", filters.duration === "all" ? "weekend" : "all")}
+          style={[
+            styles.filterChip,
+            filters.duration !== "all" && styles.filterChipActive,
+          ]}
+          onPress={() =>
+            onFilterChange(
+              "duration",
+              filters.duration === "all" ? "weekend" : "all",
+            )
+          }
         >
           <MaterialCommunityIcons
             name="clock-outline"
             size={14}
             color={filters.duration !== "all" ? "#FFF" : "#64748B"}
           />
-          <Text style={[styles.filterChipText, filters.duration !== "all" && { color: "#FFF" }]}>
+          <Text
+            style={[
+              styles.filterChipText,
+              filters.duration !== "all" && { color: "#FFF" },
+            ]}
+          >
             {filters.duration === "all" ? "Duration" : filters.duration}
           </Text>
         </PressableScale>
 
         {/* Vibe Filter */}
         <PressableScale
-          style={[styles.filterChip, filters.vibe !== "all" && styles.filterChipActive]}
-          onPress={() => onFilterChange("vibe", filters.vibe === "all" ? "adventure" : "all")}
+          style={[
+            styles.filterChip,
+            filters.vibe !== "all" && styles.filterChipActive,
+          ]}
+          onPress={() =>
+            onFilterChange("vibe", filters.vibe === "all" ? "adventure" : "all")
+          }
         >
           <MaterialCommunityIcons
             name="heart-outline"
             size={14}
             color={filters.vibe !== "all" ? "#FFF" : "#64748B"}
           />
-          <Text style={[styles.filterChipText, filters.vibe !== "all" && { color: "#FFF" }]}>
+          <Text
+            style={[
+              styles.filterChipText,
+              filters.vibe !== "all" && { color: "#FFF" },
+            ]}
+          >
             {filters.vibe === "all" ? "Vibe" : filters.vibe}
           </Text>
         </PressableScale>
 
         {/* Season Filter */}
         <PressableScale
-          style={[styles.filterChip, filters.season !== "all" && styles.filterChipActive]}
-          onPress={() => onFilterChange("season", filters.season === "all" ? CURRENT_SEASON : "all")}
+          style={[
+            styles.filterChip,
+            filters.season !== "all" && styles.filterChipActive,
+          ]}
+          onPress={() =>
+            onFilterChange(
+              "season",
+              filters.season === "all" ? CURRENT_SEASON : "all",
+            )
+          }
         >
           <MaterialCommunityIcons
             name="weather-sunny"
             size={14}
             color={filters.season !== "all" ? "#FFF" : "#64748B"}
           />
-          <Text style={[styles.filterChipText, filters.season !== "all" && { color: "#FFF" }]}>
+          <Text
+            style={[
+              styles.filterChipText,
+              filters.season !== "all" && { color: "#FFF" },
+            ]}
+          >
             {filters.season === "all" ? "Season" : filters.season}
           </Text>
         </PressableScale>
@@ -394,7 +551,11 @@ const FilterChips = memo(({ filters, onFilterChange }: FilterChipsProps) => {
             onFilterChange("season", "all");
           }}
         >
-          <MaterialCommunityIcons name="close-circle" size={16} color="#64748B" />
+          <MaterialCommunityIcons
+            name="close-circle"
+            size={16}
+            color="#64748B"
+          />
         </TouchableOpacity>
       )}
     </View>
@@ -415,140 +576,203 @@ interface SearchOverlayProps {
   getImageUrl: (dest: Destination) => string | undefined;
 }
 
-const SearchOverlay = memo(({
-  visible,
-  search,
-  onSearchChange,
-  onClose,
-  onResultPress,
-  recentSearches,
-  destinations,
-  getImageUrl,
-}: SearchOverlayProps) => {
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+const SearchOverlay = memo(
+  ({
+    visible,
+    search,
+    onSearchChange,
+    onClose,
+    onResultPress,
+    recentSearches,
+    destinations,
+    getImageUrl,
+  }: SearchOverlayProps) => {
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
 
-  useEffect(() => {
-    if (visible) {
-      Animated.parallel([
-        Animated.timing(fadeAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
-        Animated.timing(slideAnim, { toValue: 0, duration: 300, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(fadeAnim, { toValue: 0, duration: 150, useNativeDriver: true }),
-        Animated.timing(slideAnim, { toValue: SCREEN_HEIGHT, duration: 200, useNativeDriver: true }),
-      ]).start();
-    }
-  }, [visible]);
+    useEffect(() => {
+      if (visible) {
+        Animated.parallel([
+          Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+          Animated.timing(slideAnim, {
+            toValue: 0,
+            duration: 300,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+          }),
+        ]).start();
+      } else {
+        Animated.parallel([
+          Animated.timing(fadeAnim, {
+            toValue: 0,
+            duration: 150,
+            useNativeDriver: true,
+          }),
+          Animated.timing(slideAnim, {
+            toValue: SCREEN_HEIGHT,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      }
+    }, [visible]);
 
-  const searchIntent = useMemo(() => analyzeSearchIntent(search), [search]);
+    const searchIntent = useMemo(() => analyzeSearchIntent(search), [search]);
 
-  const quickSearches = useMemo(() => [
-    { query: "Beaches near me", icon: "beach", color: "#0EA5E9" },
-    { query: "Mountain treks", icon: "image-filter-hdr", color: "#10B981" },
-    { query: "Weekend getaways", icon: "calendar-weekend", color: "#F59E0B" },
-    { query: "Romantic spots", icon: "heart", color: "#EC4899" },
-  ], []);
+    const quickSearches = useMemo(
+      () => [
+        { query: "Beaches near me", icon: "beach", color: "#0EA5E9" },
+        { query: "Mountain treks", icon: "image-filter-hdr", color: "#10B981" },
+        {
+          query: "Weekend getaways",
+          icon: "calendar-weekend",
+          color: "#F59E0B",
+        },
+        { query: "Romantic spots", icon: "heart", color: "#EC4899" },
+      ],
+      [],
+    );
 
-  if (!visible) return null;
+    if (!visible) return null;
 
-  return (
-    <Animated.View style={[styles.searchOverlay, { opacity: fadeAnim }]}>
-      <BlurView intensity={20} style={StyleSheet.absoluteFill} />
-      
-      <Animated.View style={[styles.searchOverlayContent, { transform: [{ translateY: slideAnim }] }]}>
-        {/* Search Input */}
-        <View style={styles.searchOverlayInput}>
-          <MaterialCommunityIcons name="magnify" size={22} color="#64748B" />
-          <TextInput
-            placeholder="Try 'romantic beaches' or 'mountain trek'..."
-            placeholderTextColor="#94A3B8"
-            value={search}
-            onChangeText={onSearchChange}
-            style={styles.searchOverlayTextInput}
-            autoFocus
-            autoCapitalize="none"
-          />
-          {search.length > 0 && (
-            <TouchableOpacity onPress={() => onSearchChange("")}>
-              <MaterialCommunityIcons name="close-circle" size={20} color="#94A3B8" />
-            </TouchableOpacity>
-          )}
-        </View>
+    return (
+      <Animated.View style={[styles.searchOverlay, { opacity: fadeAnim }]}>
+        <BlurView intensity={20} style={StyleSheet.absoluteFill} />
 
-        {/* Search Intent Badge */}
-        {search.length >= 2 && searchIntent.type !== "unknown" && (
-          <View style={styles.intentBadge}>
-            <MaterialCommunityIcons
-              name={
-                searchIntent.type === "activity" ? "run" :
-                searchIntent.type === "vibe" ? "heart" :
-                searchIntent.type === "season" ? "weather-sunny" :
-                searchIntent.type === "budget" ? "currency-inr" : "map-marker"
-              }
-              size={14}
-              color="#8B5CF6"
+        <Animated.View
+          style={[
+            styles.searchOverlayContent,
+            { transform: [{ translateY: slideAnim }] },
+          ]}
+        >
+          {/* Search Input */}
+          <View style={styles.searchOverlayInput}>
+            <MaterialCommunityIcons name="magnify" size={22} color="#64748B" />
+            <TextInput
+              placeholder="Try 'romantic beaches' or 'mountain trek'..."
+              placeholderTextColor="#94A3B8"
+              value={search}
+              onChangeText={onSearchChange}
+              style={styles.searchOverlayTextInput}
+              autoFocus
+              autoCapitalize="none"
             />
-            <Text style={styles.intentText}>
-              {searchIntent.type === "activity" ? "Looking for activities" :
-               searchIntent.type === "vibe" ? "Matching your vibe" :
-               searchIntent.type === "season" ? "Seasonal suggestion" :
-               searchIntent.type === "budget" ? "Budget-friendly" : "Destinations"}
-            </Text>
+            {search.length > 0 && (
+              <TouchableOpacity onPress={() => onSearchChange("")}>
+                <MaterialCommunityIcons
+                  name="close-circle"
+                  size={20}
+                  color="#94A3B8"
+                />
+              </TouchableOpacity>
+            )}
           </View>
-        )}
 
-        {/* Quick Searches */}
-        {search.length === 0 && (
-          <>
-            <Text style={styles.searchOverlaySection}>Quick Searches</Text>
-            <View style={styles.quickSearchGrid}>
-              {quickSearches.map((qs) => (
+          {/* Search Intent Badge */}
+          {search.length >= 2 && searchIntent.type !== "unknown" && (
+            <View style={styles.intentBadge}>
+              <MaterialCommunityIcons
+                name={
+                  searchIntent.type === "activity"
+                    ? "run"
+                    : searchIntent.type === "vibe"
+                      ? "heart"
+                      : searchIntent.type === "season"
+                        ? "weather-sunny"
+                        : searchIntent.type === "budget"
+                          ? "currency-inr"
+                          : "map-marker"
+                }
+                size={14}
+                color="#8B5CF6"
+              />
+              <Text style={styles.intentText}>
+                {searchIntent.type === "activity"
+                  ? "Looking for activities"
+                  : searchIntent.type === "vibe"
+                    ? "Matching your vibe"
+                    : searchIntent.type === "season"
+                      ? "Seasonal suggestion"
+                      : searchIntent.type === "budget"
+                        ? "Budget-friendly"
+                        : "Destinations"}
+              </Text>
+            </View>
+          )}
+
+          {/* Quick Searches */}
+          {search.length === 0 && (
+            <>
+              <Text style={styles.searchOverlaySection}>Quick Searches</Text>
+              <View style={styles.quickSearchGrid}>
+                {quickSearches.map((qs) => (
+                  <PressableScale
+                    key={qs.query}
+                    style={styles.quickSearchChip}
+                    onPress={() => onSearchChange(qs.query)}
+                  >
+                    <MaterialCommunityIcons
+                      name={qs.icon as any}
+                      size={18}
+                      color={qs.color}
+                    />
+                    <Text style={styles.quickSearchText}>{qs.query}</Text>
+                  </PressableScale>
+                ))}
+              </View>
+
+              <Text style={styles.searchOverlaySection}>Recent Searches</Text>
+              <View style={styles.recentSearchesRow}>
+                {recentSearches.map((s, i) => (
+                  <TouchableOpacity
+                    key={`${s}-${i}`}
+                    style={styles.recentSearchChip}
+                    onPress={() => onSearchChange(s)}
+                  >
+                    <MaterialCommunityIcons
+                      name="history"
+                      size={14}
+                      color="#94A3B8"
+                    />
+                    <Text style={styles.recentSearchText}>{s}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={styles.searchOverlaySection}>
+                Trending Destinations
+              </Text>
+              {destinations.slice(0, 5).map((dest) => (
                 <PressableScale
-                  key={qs.query}
-                  style={styles.quickSearchChip}
-                  onPress={() => onSearchChange(qs.query)}
+                  key={dest.id}
+                  style={styles.trendingRow}
+                  onPress={() => onResultPress(dest)}
                 >
-                  <MaterialCommunityIcons name={qs.icon as any} size={18} color={qs.color} />
-                  <Text style={styles.quickSearchText}>{qs.query}</Text>
+                  <MaterialCommunityIcons
+                    name="fire"
+                    size={18}
+                    color="#EF4444"
+                  />
+                  <Text style={styles.trendingRowText}>{dest.label}</Text>
+                  <Text style={styles.trendingRowRegion}>{dest.region}</Text>
+                  <MaterialCommunityIcons
+                    name="chevron-right"
+                    size={18}
+                    color="#CBD5E1"
+                  />
                 </PressableScale>
               ))}
-            </View>
-
-            <Text style={styles.searchOverlaySection}>Recent Searches</Text>
-            <View style={styles.recentSearchesRow}>
-              {recentSearches.map((s, i) => (
-                <TouchableOpacity
-                  key={`${s}-${i}`}
-                  style={styles.recentSearchChip}
-                  onPress={() => onSearchChange(s)}
-                >
-                  <MaterialCommunityIcons name="history" size={14} color="#94A3B8" />
-                  <Text style={styles.recentSearchText}>{s}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <Text style={styles.searchOverlaySection}>Trending Destinations</Text>
-            {destinations.slice(0, 5).map((dest) => (
-              <PressableScale
-                key={dest.id}
-                style={styles.trendingRow}
-                onPress={() => onResultPress(dest)}
-              >
-                <MaterialCommunityIcons name="fire" size={18} color="#EF4444" />
-                <Text style={styles.trendingRowText}>{dest.label}</Text>
-                <Text style={styles.trendingRowRegion}>{dest.region}</Text>
-                <MaterialCommunityIcons name="chevron-right" size={18} color="#CBD5E1" />
-              </PressableScale>
-            ))}
-          </>
-        )}
+            </>
+          )}
+        </Animated.View>
       </Animated.View>
-    </Animated.View>
-  );
-});
+    );
+  },
+);
 SearchOverlay.displayName = "SearchOverlay";
 
 // ─────────────────────────────────────────────────────────────
@@ -557,13 +781,13 @@ SearchOverlay.displayName = "SearchOverlay";
 
 function useExploreEngine() {
   const navigation = useNavigation<NavProp>();
-  
+
   // React Query for destinations
-  const { 
-    data: destinationsData, 
-    isLoading: loading, 
-    error: queryError, 
-    refetch 
+  const {
+    data: destinationsData,
+    isLoading: loading,
+    error: queryError,
+    refetch,
   } = useDestinations();
 
   // State
@@ -578,18 +802,26 @@ function useExploreEngine() {
     season: "all",
   });
   const [images, setImages] = useState<Record<string, UnsplashImage>>({});
-  const [recentSearches, setRecentSearches] = useState<string[]>(["Goa", "Manali", "Kerala"]);
+  const [recentSearches, setRecentSearches] = useState<string[]>([
+    "Goa",
+    "Manali",
+    "Kerala",
+  ]);
 
   // Search query with React Query
   const { data: searchResults } = useSearchDestinations(debouncedSearch);
 
   // Extract destinations
-  const destinations = useMemo(() => destinationsData?.destinations || [], [destinationsData]);
+  const destinations = useMemo(
+    () => destinationsData?.destinations || [],
+    [destinationsData],
+  );
 
   // Load images
   useEffect(() => {
     if (destinations.length > 0) {
-      destinationsService.getAllDestinationImages()
+      destinationsService
+        .getAllDestinationImages()
         .then(setImages)
         .catch(() => {});
     }
@@ -602,32 +834,43 @@ function useExploreEngine() {
   }, [search]);
 
   // Search intent analysis
-  const searchIntent = useMemo(() => 
-    debouncedSearch.length >= 2 ? analyzeSearchIntent(debouncedSearch) : undefined,
-    [debouncedSearch]
+  const searchIntent = useMemo(
+    () =>
+      debouncedSearch.length >= 2
+        ? analyzeSearchIntent(debouncedSearch)
+        : undefined,
+    [debouncedSearch],
   );
 
   // Get image URL
-  const getImageUrl = useCallback((dest: Destination): string | undefined => {
-    const img = images[dest.id];
-    return img?.url_small || img?.url_thumb || img?.url_regular;
-  }, [images]);
+  const getImageUrl = useCallback(
+    (dest: Destination): string | undefined => {
+      const img = images[dest.id];
+      return img?.url_small || img?.url_thumb || img?.url_regular;
+    },
+    [images],
+  );
 
   // AI Insights Engine
   const aiInsights = useMemo((): AIInsight[] => {
     if (destinations.length === 0) return [];
 
     const insights: AIInsight[] = [];
-    
+
     // Personalized recommendations based on category
     const personalizedDest = destinations
       .filter((d) => {
         const destStr = `${d.label} ${d.region}`.toLowerCase();
-        if (activeCategory === "beach") return /beach|goa|andaman|kerala/.test(destStr);
-        if (activeCategory === "mountain") return /mountain|hill|manali|shimla|leh/.test(destStr);
-        if (activeCategory === "city") return /mumbai|delhi|bangalore|city/.test(destStr);
-        if (activeCategory === "spiritual") return /varanasi|rishikesh|temple|spiritual/.test(destStr);
-        if (activeCategory === "adventure") return /trek|adventure|hiking|camp/.test(destStr);
+        if (activeCategory === "beach")
+          return /beach|goa|andaman|kerala/.test(destStr);
+        if (activeCategory === "mountain")
+          return /mountain|hill|manali|shimla|leh/.test(destStr);
+        if (activeCategory === "city")
+          return /mumbai|delhi|bangalore|city/.test(destStr);
+        if (activeCategory === "spiritual")
+          return /varanasi|rishikesh|temple|spiritual/.test(destStr);
+        if (activeCategory === "adventure")
+          return /trek|adventure|hiking|camp/.test(destStr);
         return true;
       })
       .slice(0, 6);
@@ -639,18 +882,26 @@ function useExploreEngine() {
         title: "Curated for You",
         subtitle: "Based on your interests",
         destinations: personalizedDest,
-        reason: activeCategory === "all" ? "Trending with travelers like you" : `Because you love ${activeCategory}`,
+        reason:
+          activeCategory === "all"
+            ? "Trending with travelers like you"
+            : `Because you love ${activeCategory}`,
       });
     }
 
     // Seasonal recommendations
-    const seasonalDest = destinations.filter((d) => {
-      const destStr = `${d.label} ${d.region}`.toLowerCase();
-      if (CURRENT_SEASON === "summer") return /beach|hill|coast|manali/.test(destStr);
-      if (CURRENT_SEASON === "winter") return /goa|kerala|rajasthan|desert/.test(destStr);
-      if (CURRENT_SEASON === "monsoon") return /hill|kerala|coorg|lonavala/.test(destStr);
-      return true;
-    }).slice(0, 5);
+    const seasonalDest = destinations
+      .filter((d) => {
+        const destStr = `${d.label} ${d.region}`.toLowerCase();
+        if (CURRENT_SEASON === "summer")
+          return /beach|hill|coast|manali/.test(destStr);
+        if (CURRENT_SEASON === "winter")
+          return /goa|kerala|rajasthan|desert/.test(destStr);
+        if (CURRENT_SEASON === "monsoon")
+          return /hill|kerala|coorg|lonavala/.test(destStr);
+        return true;
+      })
+      .slice(0, 5);
 
     if (seasonalDest.length > 0) {
       insights.push({
@@ -695,11 +946,31 @@ function useExploreEngine() {
 
       // Category filter
       if (activeCategory !== "all") {
-        if (activeCategory === "beach" && !/beach|goa|andaman|coast/.test(destStr)) return false;
-        if (activeCategory === "mountain" && !/mountain|hill|manali|shimla|leh/.test(destStr)) return false;
-        if (activeCategory === "city" && !/mumbai|delhi|bangalore|city/.test(destStr)) return false;
-        if (activeCategory === "spiritual" && !/varanasi|rishikesh|temple|spiritual/.test(destStr)) return false;
-        if (activeCategory === "adventure" && !/trek|adventure|hiking|camp/.test(destStr)) return false;
+        if (
+          activeCategory === "beach" &&
+          !/beach|goa|andaman|coast/.test(destStr)
+        )
+          return false;
+        if (
+          activeCategory === "mountain" &&
+          !/mountain|hill|manali|shimla|leh/.test(destStr)
+        )
+          return false;
+        if (
+          activeCategory === "city" &&
+          !/mumbai|delhi|bangalore|city/.test(destStr)
+        )
+          return false;
+        if (
+          activeCategory === "spiritual" &&
+          !/varanasi|rishikesh|temple|spiritual/.test(destStr)
+        )
+          return false;
+        if (
+          activeCategory === "adventure" &&
+          !/trek|adventure|hiking|camp/.test(destStr)
+        )
+          return false;
       }
 
       return true;
@@ -714,25 +985,38 @@ function useExploreEngine() {
       .sort((a, b) => (b._score || 0) - (a._score || 0));
 
     return result;
-  }, [destinations, debouncedSearch, searchResults, activeCategory, filters, searchIntent]);
+  }, [
+    destinations,
+    debouncedSearch,
+    searchResults,
+    activeCategory,
+    filters,
+    searchIntent,
+  ]);
 
   // Filter change handler
-  const handleFilterChange = useCallback((key: keyof FilterState, value: string) => {
-    setFilters((prev) => ({ ...prev, [key]: value as any }));
-  }, []);
+  const handleFilterChange = useCallback(
+    (key: keyof FilterState, value: string) => {
+      setFilters((prev) => ({ ...prev, [key]: value as any }));
+    },
+    [],
+  );
 
   // Destination press handler
-  const handleDestinationPress = useCallback((dest: Destination) => {
-    // Add to recent searches
-    setRecentSearches((prev) => {
-      const filtered = prev.filter((s) => s !== dest.label);
-      return [dest.label, ...filtered].slice(0, 5);
-    });
-    
-    setIsSearchFocused(false);
-    Keyboard.dismiss();
-    navigation.navigate("DestinationDetail", { destination: dest });
-  }, [navigation]);
+  const handleDestinationPress = useCallback(
+    (dest: Destination) => {
+      // Add to recent searches
+      setRecentSearches((prev) => {
+        const filtered = prev.filter((s) => s !== dest.label);
+        return [dest.label, ...filtered].slice(0, 5);
+      });
+
+      setIsSearchFocused(false);
+      Keyboard.dismiss();
+      navigation.navigate("DestinationDetail", { destination: dest });
+    },
+    [navigation],
+  );
 
   // Refresh handler
   const handleRefresh = useCallback(() => {
@@ -744,7 +1028,7 @@ function useExploreEngine() {
     destinations,
     filteredDestinations,
     aiInsights,
-    
+
     // State
     loading,
     error: queryError ? (queryError as Error).message : null,
@@ -756,7 +1040,7 @@ function useExploreEngine() {
     setActiveCategory,
     filters,
     recentSearches,
-    
+
     // Handlers
     handleFilterChange,
     getImageUrl,
@@ -790,26 +1074,32 @@ export default function ExploreScreen() {
     handleRefresh,
   } = useExploreEngine();
 
-  const listRef = useRef<FlashList<any>>(null);
+  const listRef = useRef<any>(null);
 
   // Render destination item
-  const renderDestination = useCallback(({ item }: { item: Destination }) => (
-    <DestinationCard
-      destination={item}
-      imageUrl={getImageUrl(item)}
-      onPress={() => handleDestinationPress(item)}
-    />
-  ), [getImageUrl, handleDestinationPress]);
+  const renderDestination = useCallback(
+    ({ item }: { item: Destination }) => (
+      <DestinationCard
+        destination={item}
+        imageUrl={getImageUrl(item)}
+        onPress={() => handleDestinationPress(item)}
+      />
+    ),
+    [getImageUrl, handleDestinationPress],
+  );
 
   // Render insight item
-  const renderInsight = useCallback((insight: AIInsight) => (
-    <InsightCard
-      key={insight.id}
-      insight={insight}
-      getImageUrl={getImageUrl}
-      onDestinationPress={handleDestinationPress}
-    />
-  ), [getImageUrl, handleDestinationPress]);
+  const renderInsight = useCallback(
+    (insight: AIInsight) => (
+      <InsightCard
+        key={insight.id}
+        insight={insight}
+        getImageUrl={getImageUrl}
+        onDestinationPress={handleDestinationPress}
+      />
+    ),
+    [getImageUrl, handleDestinationPress],
+  );
 
   // List header component
   const ListHeader = useMemo(() => {
@@ -834,31 +1124,46 @@ export default function ExploreScreen() {
         </View>
       </View>
     );
-  }, [isSearchFocused, aiInsights, filters, handleFilterChange, search, filteredDestinations.length, renderInsight]);
+  }, [
+    isSearchFocused,
+    aiInsights,
+    filters,
+    handleFilterChange,
+    search,
+    filteredDestinations.length,
+    renderInsight,
+  ]);
 
   // Empty component
-  const ListEmpty = useMemo(() => (
-    <View style={styles.emptyContainer}>
-      <MaterialCommunityIcons name="map-search-outline" size={64} color="#CBD5E1" />
-      <Text style={styles.emptyTitle}>No destinations found</Text>
-      <Text style={styles.emptySubtitle}>
-        Try adjusting your filters or search for something else
-      </Text>
-      <TouchableOpacity
-        style={styles.emptyCTA}
-        onPress={() => {
-          setActiveCategory("all");
-          handleFilterChange("budget", "all");
-          handleFilterChange("duration", "all");
-          handleFilterChange("vibe", "all");
-          handleFilterChange("season", "all");
-          setSearch("");
-        }}
-      >
-        <Text style={styles.emptyCTAText}>Clear all filters</Text>
-      </TouchableOpacity>
-    </View>
-  ), [handleFilterChange, setActiveCategory]);
+  const ListEmpty = useMemo(
+    () => (
+      <View style={styles.emptyContainer}>
+        <MaterialCommunityIcons
+          name="map-search-outline"
+          size={64}
+          color="#CBD5E1"
+        />
+        <Text style={styles.emptyTitle}>No destinations found</Text>
+        <Text style={styles.emptySubtitle}>
+          Try adjusting your filters or search for something else
+        </Text>
+        <TouchableOpacity
+          style={styles.emptyCTA}
+          onPress={() => {
+            setActiveCategory("all");
+            handleFilterChange("budget", "all");
+            handleFilterChange("duration", "all");
+            handleFilterChange("vibe", "all");
+            handleFilterChange("season", "all");
+            setSearch("");
+          }}
+        >
+          <Text style={styles.emptyCTAText}>Clear all filters</Text>
+        </TouchableOpacity>
+      </View>
+    ),
+    [handleFilterChange, setActiveCategory],
+  );
 
   if (loading) {
     return <LoadingSpinner message="Curating destinations..." />;
@@ -871,12 +1176,12 @@ export default function ExploreScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <StatusBar barStyle="dark-content" />
-      
+
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Explore</Text>
         <Text style={styles.subtitle}>Discover your next adventure</Text>
-        
+
         {/* Search Bar */}
         <PressableScale
           style={styles.searchBar}
@@ -887,7 +1192,11 @@ export default function ExploreScreen() {
             {search || "Where to next?"}
           </Text>
           <View style={styles.searchBarMic}>
-            <MaterialCommunityIcons name="microphone" size={18} color="#94A3B8" />
+            <MaterialCommunityIcons
+              name="microphone"
+              size={18}
+              color="#94A3B8"
+            />
           </View>
         </PressableScale>
 
@@ -915,7 +1224,6 @@ export default function ExploreScreen() {
           data={filteredDestinations}
           keyExtractor={(item) => item.id}
           numColumns={2}
-          estimatedItemSize={CARD_WIDTH + spacing.md}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={ListHeader}
@@ -938,10 +1246,7 @@ export default function ExploreScreen() {
 
       {/* FAB - AI Trip Planner */}
       {!isSearchFocused && (
-        <PressableScale
-          style={styles.fab}
-          onPress={() => {}}
-        >
+        <PressableScale style={styles.fab} onPress={() => {}}>
           <MaterialCommunityIcons name="robot-outline" size={22} color="#FFF" />
           <Text style={styles.fabText}>Plan with AI</Text>
         </PressableScale>
@@ -956,7 +1261,7 @@ export default function ExploreScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F8FAFC" },
-  
+
   // Header
   header: {
     paddingHorizontal: spacing.lg,

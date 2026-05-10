@@ -195,7 +195,12 @@ const QuickActionsSection: React.FC = () => {
           break;
         case "check_weather":
           // Navigate to Explore tab
-          navigation.dispatch(CommonActions.navigate({ name: "ExploreTab" }));
+          navigation.dispatch(
+            CommonActions.navigate({
+              name: "MainApp",
+              params: { screen: "ExploreTab" },
+            }),
+          );
           break;
         case "add_expense":
           navigation.dispatch(

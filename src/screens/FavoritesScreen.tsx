@@ -1,7 +1,7 @@
 /**
  * FavoritesScreen V5 – Premium Intelligent Wishlist Experience
  * Comparable to Airbnb's "Saved" and Pinterest-level inspiration boards
- * 
+ *
  * Features:
  * - FlashList for 60fps smooth scrolling
  * - AI-powered recommendations ("Because you saved Goa → Try Gokarna")
@@ -15,7 +15,14 @@
  * - Best time to visit alerts
  */
 
-import React, { useState, useMemo, useCallback, useRef, useEffect, memo } from "react";
+import React, {
+  useState,
+  useMemo,
+  useCallback,
+  useRef,
+  useEffect,
+  memo,
+} from "react";
 import {
   View,
   StyleSheet,
@@ -49,6 +56,7 @@ import { GlassCard } from "@/components/UI/GlassCard";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const CARD_WIDTH = SCREEN_WIDTH - spacing.lg * 2;
+const shouldUseNativeDriver = Platform.OS !== "web";
 
 type NavProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -135,7 +143,7 @@ const getBestTimeToVisit = (name: string): string => {
 
 const getMostSavedRegion = (favs: EnrichedFavorite[]): string => {
   const regions: Record<string, number> = {};
-  favs.forEach(f => {
+  favs.forEach((f) => {
     if (f.region) {
       regions[f.region] = (regions[f.region] || 0) + 1;
     }
@@ -160,12 +168,14 @@ const StatsCard = memo(({ stats }: StatsCardProps) => {
       toValue: 1,
       tension: 100,
       friction: 8,
-      useNativeDriver: true,
+      useNativeDriver: shouldUseNativeDriver,
     }).start();
   }, []);
 
   return (
-    <Animated.View style={[styles.statsCard, { transform: [{ scale: scaleAnim }] }]}>
+    <Animated.View
+      style={[styles.statsCard, { transform: [{ scale: scaleAnim }] }]}
+    >
       <LinearGradient
         colors={["#667EEA", "#764BA2"]}
         start={{ x: 0, y: 0 }}
@@ -173,7 +183,11 @@ const StatsCard = memo(({ stats }: StatsCardProps) => {
         style={styles.statsGradient}
       >
         <View style={styles.statsMain}>
-          <MaterialCommunityIcons name="heart-multiple" size={24} color="#FFF" />
+          <MaterialCommunityIcons
+            name="heart-multiple"
+            size={24}
+            color="#FFF"
+          />
           <View style={styles.statsMainText}>
             <Text style={styles.statsCount}>{stats.totalItems}</Text>
             <Text style={styles.statsLabel}>saved destinations</Text>
@@ -181,19 +195,31 @@ const StatsCard = memo(({ stats }: StatsCardProps) => {
         </View>
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
-            <MaterialCommunityIcons name="map-marker" size={16} color="rgba(255,255,255,0.8)" />
+            <MaterialCommunityIcons
+              name="map-marker"
+              size={16}
+              color="rgba(255,255,255,0.8)"
+            />
             <Text style={styles.statValue}>{stats.destinations}</Text>
             <Text style={styles.statSub}>Destinations</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <MaterialCommunityIcons name="store" size={16} color="rgba(255,255,255,0.8)" />
+            <MaterialCommunityIcons
+              name="store"
+              size={16}
+              color="rgba(255,255,255,0.8)"
+            />
             <Text style={styles.statValue}>{stats.places}</Text>
             <Text style={styles.statSub}>Places</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <MaterialCommunityIcons name="wallet-outline" size={16} color="rgba(255,255,255,0.8)" />
+            <MaterialCommunityIcons
+              name="wallet-outline"
+              size={16}
+              color="rgba(255,255,255,0.8)"
+            />
             <Text style={styles.statValueSmall}>{stats.estimatedBudget}</Text>
             <Text style={styles.statSub}>Est. Budget</Text>
           </View>
@@ -213,117 +239,158 @@ interface FavoriteCardProps {
   index: number;
 }
 
-const FavoriteCard = memo(({ favorite, onRemove, onPress, index }: FavoriteCardProps) => {
-  const scaleAnim = useRef(new Animated.Value(0)).current;
-  const heartScale = useRef(new Animated.Value(1)).current;
+const FavoriteCard = memo(
+  ({ favorite, onRemove, onPress, index }: FavoriteCardProps) => {
+    const scaleAnim = useRef(new Animated.Value(0)).current;
+    const heartScale = useRef(new Animated.Value(1)).current;
 
-  useEffect(() => {
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      tension: 80,
-      friction: 8,
-      delay: index * 50,
-      useNativeDriver: true,
-    }).start();
-  }, [index]);
+    useEffect(() => {
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        tension: 80,
+        friction: 8,
+        delay: index * 50,
+        useNativeDriver: shouldUseNativeDriver,
+      }).start();
+    }, [index]);
 
-  const handleHeartPulse = () => {
-    Animated.sequence([
-      Animated.timing(heartScale, { toValue: 1.3, duration: 100, useNativeDriver: true }),
-      Animated.spring(heartScale, { toValue: 1, tension: 200, friction: 10, useNativeDriver: true }),
-    ]).start();
-  };
+    const handleHeartPulse = () => {
+      Animated.sequence([
+        Animated.timing(heartScale, {
+          toValue: 1.3,
+          duration: 100,
+          useNativeDriver: shouldUseNativeDriver,
+        }),
+        Animated.spring(heartScale, {
+          toValue: 1,
+          tension: 200,
+          friction: 10,
+          useNativeDriver: shouldUseNativeDriver,
+        }),
+      ]).start();
+    };
 
-  return (
-    <Animated.View style={[styles.favCardWrapper, { transform: [{ scale: scaleAnim }] }]}>
-      <PressableScale
-        style={styles.favCard}
-        onPress={() => onPress(favorite)}
-        onLongPress={() => {
-          handleHeartPulse();
-          onRemove(favorite);
-        }}
+    return (
+      <Animated.View
+        style={[styles.favCardWrapper, { transform: [{ scale: scaleAnim }] }]}
       >
-        {/* Image */}
-        <View style={styles.favImageContainer}>
-          {favorite.imageUrl ? (
-            <Animated.Image
-              source={{ uri: favorite.imageUrl }}
-              style={styles.favImage}
-              resizeMode="cover"
-            />
-          ) : (
-            <View style={styles.favImagePlaceholder}>
-              <MaterialCommunityIcons
-                name={favorite.item_type === "destination" ? "map-marker" : "store"}
-                size={32}
-                color="#CBD5E1"
-              />
-            </View>
-          )}
-          <LinearGradient
-            colors={["transparent", "rgba(0,0,0,0.7)"]}
-            style={styles.favImageGradient}
-          />
-          <View style={styles.favTypeBadge}>
-            <MaterialCommunityIcons
-              name={favorite.item_type === "destination" ? "map-marker" : "store"}
-              size={12}
-              color="#FFF"
-            />
-            <Text style={styles.favTypeText}>{favorite.item_type}</Text>
-          </View>
-        </View>
-
-        {/* Content */}
-        <View style={styles.favContent}>
-          <Text style={styles.favName} numberOfLines={1}>{favorite.item_name}</Text>
-          {favorite.region && (
-            <Text style={styles.favRegion}>{favorite.region}</Text>
-          )}
-          {favorite.tagline && (
-            <Text style={styles.favTagline} numberOfLines={2}>{favorite.tagline}</Text>
-          )}
-
-          {/* Meta Info */}
-          <View style={styles.favMeta}>
-            <View style={styles.favMetaItem}>
-              <MaterialCommunityIcons name="calendar-outline" size={12} color="#64748B" />
-              <Text style={styles.favMetaText}>{formatDaysAgo(favorite.savedDaysAgo)}</Text>
-            </View>
-            {favorite.bestTimeToVisit && (
-              <View style={styles.favMetaItem}>
-                <MaterialCommunityIcons name="weather-sunny" size={12} color="#F59E0B" />
-                <Text style={styles.favMetaText}>{favorite.bestTimeToVisit}</Text>
-              </View>
-            )}
-          </View>
-
-          {/* Budget Estimate */}
-          {favorite.estimatedBudget && (
-            <View style={styles.budgetBadge}>
-              <MaterialCommunityIcons name="currency-inr" size={12} color="#10B981" />
-              <Text style={styles.budgetText}>{favorite.estimatedBudget}</Text>
-            </View>
-          )}
-        </View>
-
-        {/* Remove Button */}
-        <TouchableOpacity
-          style={styles.removeBtn}
-          onPress={() => {
+        <PressableScale
+          style={styles.favCard}
+          onPress={() => onPress(favorite)}
+          onLongPress={() => {
             handleHeartPulse();
             onRemove(favorite);
           }}
         >
-          <Animated.View style={{ transform: [{ scale: heartScale }] }}>
-            <MaterialCommunityIcons name="heart" size={22} color="#EF4444" />
-          </Animated.View>
-        </TouchableOpacity>
-      </PressableScale>
-    </Animated.View>
-  );
-});
+          {/* Image */}
+          <View style={styles.favImageContainer}>
+            {favorite.imageUrl ? (
+              <Animated.Image
+                source={{ uri: favorite.imageUrl }}
+                style={styles.favImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <View style={styles.favImagePlaceholder}>
+                <MaterialCommunityIcons
+                  name={
+                    favorite.item_type === "destination"
+                      ? "map-marker"
+                      : "store"
+                  }
+                  size={32}
+                  color="#CBD5E1"
+                />
+              </View>
+            )}
+            <LinearGradient
+              colors={["transparent", "rgba(0,0,0,0.7)"]}
+              style={styles.favImageGradient}
+            />
+            <View style={styles.favTypeBadge}>
+              <MaterialCommunityIcons
+                name={
+                  favorite.item_type === "destination" ? "map-marker" : "store"
+                }
+                size={12}
+                color="#FFF"
+              />
+              <Text style={styles.favTypeText}>{favorite.item_type}</Text>
+            </View>
+          </View>
+
+          {/* Content */}
+          <View style={styles.favContent}>
+            <Text style={styles.favName} numberOfLines={1}>
+              {favorite.item_name}
+            </Text>
+            {favorite.region && (
+              <Text style={styles.favRegion}>{favorite.region}</Text>
+            )}
+            {favorite.tagline && (
+              <Text style={styles.favTagline} numberOfLines={2}>
+                {favorite.tagline}
+              </Text>
+            )}
+
+            {/* Meta Info */}
+            <View style={styles.favMeta}>
+              <View style={styles.favMetaItem}>
+                <MaterialCommunityIcons
+                  name="calendar-outline"
+                  size={12}
+                  color="#64748B"
+                />
+                <Text style={styles.favMetaText}>
+                  {formatDaysAgo(favorite.savedDaysAgo)}
+                </Text>
+              </View>
+              {favorite.bestTimeToVisit && (
+                <View style={styles.favMetaItem}>
+                  <MaterialCommunityIcons
+                    name="weather-sunny"
+                    size={12}
+                    color="#F59E0B"
+                  />
+                  <Text style={styles.favMetaText}>
+                    {favorite.bestTimeToVisit}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            {/* Budget Estimate */}
+            {favorite.estimatedBudget && (
+              <View style={styles.budgetBadge}>
+                <MaterialCommunityIcons
+                  name="currency-inr"
+                  size={12}
+                  color="#10B981"
+                />
+                <Text style={styles.budgetText}>
+                  {favorite.estimatedBudget}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* Remove Button */}
+          <TouchableOpacity
+            style={styles.removeBtn}
+            onPress={() => {
+              handleHeartPulse();
+              onRemove(favorite);
+            }}
+          >
+            <Animated.View style={{ transform: [{ scale: heartScale }] }}>
+              <MaterialCommunityIcons name="heart" size={22} color="#EF4444" />
+            </Animated.View>
+          </TouchableOpacity>
+        </PressableScale>
+      </Animated.View>
+    );
+  },
+);
 FavoriteCard.displayName = "FavoriteCard";
 
 // ─────────────────────────────────────────────────────────────
@@ -333,37 +400,48 @@ interface AIRecommendationCardProps {
   onPress: (dest: Destination) => void;
 }
 
-const AIRecommendationCard = memo(({ recommendation, onPress }: AIRecommendationCardProps) => {
-  return (
-    <PressableScale
-      style={styles.aiCard}
-      onPress={() => onPress(recommendation.destination)}
-    >
-      {recommendation.imageUrl ? (
-        <Animated.Image
-          source={{ uri: recommendation.imageUrl }}
-          style={styles.aiImage}
-          resizeMode="cover"
+const AIRecommendationCard = memo(
+  ({ recommendation, onPress }: AIRecommendationCardProps) => {
+    return (
+      <PressableScale
+        style={styles.aiCard}
+        onPress={() => onPress(recommendation.destination)}
+      >
+        {recommendation.imageUrl ? (
+          <Animated.Image
+            source={{ uri: recommendation.imageUrl }}
+            style={styles.aiImage}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={styles.aiImagePlaceholder} />
+        )}
+        <LinearGradient
+          colors={["transparent", "rgba(0,0,0,0.8)"]}
+          style={styles.aiGradient}
         />
-      ) : (
-        <View style={styles.aiImagePlaceholder} />
-      )}
-      <LinearGradient
-        colors={["transparent", "rgba(0,0,0,0.8)"]}
-        style={styles.aiGradient}
-      />
-      <View style={styles.aiContent}>
-        <View style={styles.aiBadge}>
-          <MaterialCommunityIcons name="robot-outline" size={12} color="#8B5CF6" />
-          <Text style={styles.aiBadgeText}>AI Suggests</Text>
+        <View style={styles.aiContent}>
+          <View style={styles.aiBadge}>
+            <MaterialCommunityIcons
+              name="robot-outline"
+              size={12}
+              color="#8B5CF6"
+            />
+            <Text style={styles.aiBadgeText}>AI Suggests</Text>
+          </View>
+          <Text style={styles.aiTitle}>{recommendation.title}</Text>
+          <Text style={styles.aiReason}>{recommendation.reason}</Text>
         </View>
-        <Text style={styles.aiTitle}>{recommendation.title}</Text>
-        <Text style={styles.aiReason}>{recommendation.reason}</Text>
-      </View>
-      <MaterialCommunityIcons name="chevron-right" size={20} color="#FFF" style={styles.aiChevron} />
-    </PressableScale>
-  );
-});
+        <MaterialCommunityIcons
+          name="chevron-right"
+          size={20}
+          color="#FFF"
+          style={styles.aiChevron}
+        />
+      </PressableScale>
+    );
+  },
+);
 AIRecommendationCard.displayName = "AIRecommendationCard";
 
 // ─────────────────────────────────────────────────────────────
@@ -378,20 +456,35 @@ const EmptyState = memo(({ onExplore }: EmptyStateProps) => {
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
-        Animated.timing(floatAnim, { toValue: -10, duration: 2000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        Animated.timing(floatAnim, { toValue: 0, duration: 2000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-      ])
+        Animated.timing(floatAnim, {
+          toValue: -10,
+          duration: 2000,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: shouldUseNativeDriver,
+        }),
+        Animated.timing(floatAnim, {
+          toValue: 0,
+          duration: 2000,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: shouldUseNativeDriver,
+        }),
+      ]),
     ).start();
   }, []);
 
   return (
     <View style={styles.emptyContainer}>
       <Animated.View style={{ transform: [{ translateY: floatAnim }] }}>
-        <MaterialCommunityIcons name="heart-outline" size={80} color="#CBD5E1" />
+        <MaterialCommunityIcons
+          name="heart-outline"
+          size={80}
+          color="#CBD5E1"
+        />
       </Animated.View>
       <Text style={styles.emptyTitle}>Your travel dreams start here</Text>
       <Text style={styles.emptySubtitle}>
-        Save destinations you love and watch your wishlist grow into unforgettable adventures
+        Save destinations you love and watch your wishlist grow into
+        unforgettable adventures
       </Text>
       <PressableScale style={styles.emptyCTA} onPress={onExplore}>
         <MaterialCommunityIcons name="compass-outline" size={20} color="#FFF" />
@@ -426,15 +519,22 @@ function useFavoritesEngine() {
         const [favsData, imagesData, destsData] = await Promise.all([
           favoritesService.list(),
           destinationsService.getAllDestinationImages(),
-          destinationsService.getAll(),
+          destinationsService.getDestinations(),
         ]);
         setImages(imagesData);
         setDestinations(destsData);
 
         // Enrich favorites
-        const enriched: EnrichedFavorite[] = favsData.map(fav => {
-          const dest = destsData.find(d => d.id === fav.item_id || d.label === fav.item_name);
-          const img = imagesData[fav.item_id] || imagesData[dest?.id || ""];
+        const enriched: EnrichedFavorite[] = favsData.map((fav: Favorite) => {
+          const dest = destsData.find(
+            (d: Destination) =>
+              d.id === fav.item_id || d.label === fav.item_name,
+          );
+          const imageKey =
+            fav.item_id !== undefined && fav.item_id !== null
+              ? String(fav.item_id)
+              : dest?.id || "";
+          const img = imagesData[imageKey];
           return {
             ...fav,
             imageUrl: img?.url_small || img?.url_thumb,
@@ -458,13 +558,15 @@ function useFavoritesEngine() {
   // Filtered favorites
   const filteredFavorites = useMemo(() => {
     if (filter === "all") return favorites;
-    return favorites.filter(f => f.item_type === filter);
+    return favorites.filter((f) => f.item_type === filter);
   }, [favorites, filter]);
 
   // Stats
   const stats: WishlistStats = useMemo(() => {
-    const destCount = favorites.filter(f => f.item_type === "destination").length;
-    const placeCount = favorites.filter(f => f.item_type === "place").length;
+    const destCount = favorites.filter(
+      (f) => f.item_type === "destination",
+    ).length;
+    const placeCount = favorites.filter((f) => f.item_type === "place").length;
     return {
       totalItems: favorites.length,
       destinations: destCount,
@@ -477,9 +579,9 @@ function useFavoritesEngine() {
   // Grouped favorites
   const groupedFavorites = useMemo((): FavoriteGroup[] => {
     const groups: FavoriteGroup[] = [];
-    
+
     // Recent saves
-    const recent = favorites.filter(f => f.savedDaysAgo <= 7);
+    const recent = favorites.filter((f) => f.savedDaysAgo <= 7);
     if (recent.length > 0) {
       groups.push({
         id: "recent",
@@ -492,7 +594,7 @@ function useFavoritesEngine() {
     }
 
     // Dream destinations
-    const dream = favorites.filter(f => f.item_type === "destination");
+    const dream = favorites.filter((f) => f.item_type === "destination");
     if (dream.length > 0) {
       groups.push({
         id: "dream",
@@ -505,7 +607,7 @@ function useFavoritesEngine() {
     }
 
     // Saved places
-    const places = favorites.filter(f => f.item_type === "place");
+    const places = favorites.filter((f) => f.item_type === "place");
     if (places.length > 0) {
       groups.push({
         id: "places",
@@ -524,30 +626,39 @@ function useFavoritesEngine() {
   const aiRecommendations = useMemo((): AIRecommendation[] => {
     if (favorites.length === 0 || destinations.length === 0) return [];
 
-    const savedIds = new Set(favorites.map(f => f.item_id));
-    const savedNames = favorites.map(f => f.item_name.toLowerCase());
+    const savedIds = new Set(favorites.map((f) => f.item_id));
+    const savedNames = favorites.map((f) => f.item_name.toLowerCase());
     const recommendations: AIRecommendation[] = [];
 
     // Find similar destinations
-    destinations.forEach(dest => {
+    destinations.forEach((dest) => {
       if (savedIds.has(dest.id)) return;
-      
+
       const destStr = `${dest.label} ${dest.region}`.toLowerCase();
-      
+
       // Check for similarity with saved items
       let relevanceScore = 0;
       let reason = "";
-      
+
       for (const savedName of savedNames) {
-        if (/beach|goa|andaman/.test(savedName) && /beach|goa|andaman|kerala|coast/.test(destStr)) {
+        if (
+          /beach|goa|andaman/.test(savedName) &&
+          /beach|goa|andaman|kerala|coast/.test(destStr)
+        ) {
           relevanceScore += 1;
           reason = `Because you love beach destinations`;
         }
-        if (/mountain|hill|trek/.test(savedName) && /mountain|hill|trek|manali|shimla/.test(destStr)) {
+        if (
+          /mountain|hill|trek/.test(savedName) &&
+          /mountain|hill|trek|manali|shimla/.test(destStr)
+        ) {
           relevanceScore += 1;
           reason = `Because you enjoy mountain getaways`;
         }
-        if (/spiritual|temple/.test(savedName) && /varanasi|rishikesh|temple|spiritual/.test(destStr)) {
+        if (
+          /spiritual|temple/.test(savedName) &&
+          /varanasi|rishikesh|temple|spiritual/.test(destStr)
+        ) {
           relevanceScore += 1;
           reason = `Because you're seeking spiritual experiences`;
         }
@@ -570,39 +681,39 @@ function useFavoritesEngine() {
 
   // Remove favorite with undo
   const removeFavorite = useCallback((fav: EnrichedFavorite) => {
-    Alert.alert(
-      "Remove from Wishlist",
-      `Remove "${fav.item_name}"?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Remove",
-          style: "destructive",
-          onPress: async () => {
-            // Optimistic update
-            setFavorites(prev => prev.filter(f => f.id !== fav.id));
-            setRemovedItem(fav);
-            
-            try {
-              await favoritesService.remove(fav.id);
-            } catch {
-              // Revert on error
-              setFavorites(prev => [...prev, fav]);
-              Alert.alert("Error", "Failed to remove. Please try again.");
-            }
-          },
+    Alert.alert("Remove from Wishlist", `Remove "${fav.item_name}"?`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Remove",
+        style: "destructive",
+        onPress: async () => {
+          // Optimistic update
+          setFavorites((prev) => prev.filter((f) => f.id !== fav.id));
+          setRemovedItem(fav);
+
+          try {
+            await favoritesService.remove(fav.id);
+          } catch {
+            // Revert on error
+            setFavorites((prev) => [...prev, fav]);
+            Alert.alert("Error", "Failed to remove. Please try again.");
+          }
         },
-      ]
-    );
+      },
+    ]);
   }, []);
 
   // Undo remove
   const undoRemove = useCallback(async () => {
     if (!removedItem) return;
-    
+
     try {
-      await favoritesService.add(removedItem.item_name, removedItem.item_type, removedItem.notes || undefined);
-      setFavorites(prev => [...prev, removedItem]);
+      await favoritesService.add(
+        removedItem.item_name,
+        removedItem.item_type,
+        removedItem.notes || undefined,
+      );
+      setFavorites((prev) => [...prev, removedItem]);
       setRemovedItem(null);
     } catch {
       Alert.alert("Error", "Could not restore item");
@@ -610,22 +721,32 @@ function useFavoritesEngine() {
   }, [removedItem]);
 
   // Navigate to destination
-  const navigateToDestination = useCallback((fav: EnrichedFavorite | Destination) => {
-    const dest = "item_type" in fav 
-      ? destinations.find(d => d.id === fav.item_id || d.label === fav.item_name)
-      : fav;
-    
-    if (dest) {
-      navigation.navigate("DestinationDetail", { destination: dest });
-    }
-  }, [navigation, destinations]);
+  const navigateToDestination = useCallback(
+    (fav: EnrichedFavorite | Destination) => {
+      const dest =
+        "item_type" in fav
+          ? destinations.find(
+              (d: Destination) =>
+                d.id === fav.item_id || d.label === fav.item_name,
+            )
+          : fav;
+
+      if (dest) {
+        navigation.navigate("DestinationDetail", { destination: dest });
+      }
+    },
+    [navigation, destinations],
+  );
 
   // Share wishlist
   const shareWishlist = useCallback(async () => {
     try {
-      const names = favorites.slice(0, 5).map(f => f.item_name).join(", ");
+      const names = favorites
+        .slice(0, 5)
+        .map((f) => f.item_name)
+        .join(", ");
       const message = `Check out my travel wishlist on TimeToTravel AI!\n\n✈️ ${favorites.length} destinations saved\n📍 ${names}${favorites.length > 5 ? "..." : ""}\n\nDownload the app to start planning your adventures!`;
-      
+
       await Share.share({
         message,
         title: "My Travel Wishlist",
@@ -642,13 +763,13 @@ function useFavoritesEngine() {
     groupedFavorites,
     aiRecommendations,
     stats,
-    
+
     // State
     loading,
     error,
     filter,
     removedItem,
-    
+
     // Handlers
     setFilter,
     removeFavorite,
@@ -683,14 +804,17 @@ export default function FavoritesScreen() {
   const listRef = useRef<FlatList>(null);
 
   // Render favorite item
-  const renderItem = useCallback(({ item, index }: { item: EnrichedFavorite; index: number }) => (
-    <FavoriteCard
-      favorite={item}
-      onRemove={removeFavorite}
-      onPress={navigateToDestination}
-      index={index}
-    />
-  ), [removeFavorite, navigateToDestination]);
+  const renderItem = useCallback(
+    ({ item, index }: { item: EnrichedFavorite; index: number }) => (
+      <FavoriteCard
+        favorite={item}
+        onRemove={removeFavorite}
+        onPress={navigateToDestination}
+        index={index}
+      />
+    ),
+    [removeFavorite, navigateToDestination],
+  );
 
   // List header
   const ListHeader = useMemo(() => {
@@ -710,12 +834,27 @@ export default function FavoritesScreen() {
               onPress={() => setFilter(f)}
             >
               <MaterialCommunityIcons
-                name={f === "all" ? "heart-multiple" : f === "destination" ? "map-marker" : "store"}
+                name={
+                  f === "all"
+                    ? "heart-multiple"
+                    : f === "destination"
+                      ? "map-marker"
+                      : "store"
+                }
                 size={14}
                 color={filter === f ? "#FFF" : "#64748B"}
               />
-              <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>
-                {f === "all" ? "All" : f === "destination" ? "Destinations" : "Places"}
+              <Text
+                style={[
+                  styles.filterText,
+                  filter === f && styles.filterTextActive,
+                ]}
+              >
+                {f === "all"
+                  ? "All"
+                  : f === "destination"
+                    ? "Destinations"
+                    : "Places"}
               </Text>
             </PressableScale>
           ))}
@@ -725,7 +864,11 @@ export default function FavoritesScreen() {
         {aiRecommendations.length > 0 && (
           <View style={styles.aiSection}>
             <View style={styles.aiSectionHeader}>
-              <MaterialCommunityIcons name="robot-outline" size={18} color="#8B5CF6" />
+              <MaterialCommunityIcons
+                name="robot-outline"
+                size={18}
+                color="#8B5CF6"
+              />
               <Text style={styles.aiSectionTitle}>You might also like</Text>
             </View>
             <ScrollView
@@ -747,13 +890,25 @@ export default function FavoritesScreen() {
         {/* Section Title */}
         <View style={styles.sectionTitleRow}>
           <Text style={styles.sectionTitle}>
-            {filter === "all" ? "My Wishlist" : filter === "destination" ? "Destinations" : "Places"}
+            {filter === "all"
+              ? "My Wishlist"
+              : filter === "destination"
+                ? "Destinations"
+                : "Places"}
           </Text>
           <Text style={styles.sectionCount}>{filteredFavorites.length}</Text>
         </View>
       </View>
     );
-  }, [favorites.length, stats, filter, aiRecommendations, filteredFavorites.length, navigateToDestination, setFilter]);
+  }, [
+    favorites.length,
+    stats,
+    filter,
+    aiRecommendations,
+    filteredFavorites.length,
+    navigateToDestination,
+    setFilter,
+  ]);
 
   if (loading) {
     return <LoadingSpinner message="Loading your wishlist..." />;
@@ -763,7 +918,11 @@ export default function FavoritesScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
-          <MaterialCommunityIcons name="alert-circle-outline" size={48} color="#EF4444" />
+          <MaterialCommunityIcons
+            name="alert-circle-outline"
+            size={48}
+            color="#EF4444"
+          />
           <Text style={styles.errorText}>{error}</Text>
           <PressableScale style={styles.retryBtn} onPress={() => {}}>
             <Text style={styles.retryBtnText}>Try Again</Text>
@@ -787,10 +946,18 @@ export default function FavoritesScreen() {
           {favorites.length > 0 && (
             <>
               <PressableScale style={styles.headerBtn} onPress={shareWishlist}>
-                <MaterialCommunityIcons name="share-variant-outline" size={22} color="#64748B" />
+                <MaterialCommunityIcons
+                  name="share-variant-outline"
+                  size={22}
+                  color="#64748B"
+                />
               </PressableScale>
               <PressableScale style={styles.headerBtn}>
-                <MaterialCommunityIcons name="folder-plus-outline" size={22} color="#64748B" />
+                <MaterialCommunityIcons
+                  name="folder-plus-outline"
+                  size={22}
+                  color="#64748B"
+                />
               </PressableScale>
             </>
           )}
@@ -815,7 +982,9 @@ export default function FavoritesScreen() {
       {/* Undo SnackBar */}
       {removedItem && (
         <View style={styles.snackBar}>
-          <Text style={styles.snackBarText}>Removed {removedItem.item_name}</Text>
+          <Text style={styles.snackBarText}>
+            Removed {removedItem.item_name}
+          </Text>
           <TouchableOpacity onPress={undoRemove}>
             <Text style={styles.snackBarAction}>UNDO</Text>
           </TouchableOpacity>

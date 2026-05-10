@@ -3,13 +3,13 @@
  * Enterprise-grade type definitions for navigation system
  */
 
-import { NavigationState as RNNavigationState } from '@react-navigation/native';
+import { NavigationState as RNNavigationState } from "@react-navigation/native";
 
 // ============================================
 // User & Auth Types
 // ============================================
 
-export type UserRole = 'guest' | 'user' | 'admin' | 'premium';
+export type UserRole = "guest" | "user" | "admin" | "premium";
 
 export interface Permission {
   key: string;
@@ -122,7 +122,7 @@ export type RootStackParamList = {
 // Navigation State Types
 // ============================================
 
-export interface NavigationState extends RNNavigationState {
+export interface NavigationState {
   stale: boolean;
   type: string;
   index: number;
@@ -180,7 +180,7 @@ export interface ParsedDeepLink {
 // ============================================
 
 export interface NavigationEvent {
-  type: 'navigate' | 'back' | 'reset' | 'tab_switch' | 'deep_link';
+  type: "navigate" | "back" | "reset" | "tab_switch" | "deep_link";
   routeName: string;
   params?: Record<string, unknown>;
   timestamp: number;
@@ -234,12 +234,13 @@ export interface NavigationError {
 }
 
 export const NavigationErrorCodes = {
-  ROUTE_NOT_FOUND: 'ROUTE_NOT_FOUND',
-  UNAUTHORIZED: 'UNAUTHORIZED',
-  INVALID_PARAMS: 'INVALID_PARAMS',
-  DEEP_LINK_FAILED: 'DEEP_LINK_FAILED',
-  STATE_RESTORE_FAILED: 'STATE_RESTORE_FAILED',
-  UNKNOWN: 'UNKNOWN',
+  ROUTE_NOT_FOUND: "ROUTE_NOT_FOUND",
+  UNAUTHORIZED: "UNAUTHORIZED",
+  INVALID_PARAMS: "INVALID_PARAMS",
+  DEEP_LINK_FAILED: "DEEP_LINK_FAILED",
+  STATE_RESTORE_FAILED: "STATE_RESTORE_FAILED",
+  UNKNOWN: "UNKNOWN",
 } as const;
 
-export type NavigationErrorCode = typeof NavigationErrorCodes[keyof typeof NavigationErrorCodes];
+export type NavigationErrorCode =
+  (typeof NavigationErrorCodes)[keyof typeof NavigationErrorCodes];

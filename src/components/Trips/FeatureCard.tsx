@@ -3,7 +3,7 @@
  * Optimized with React.memo, animations, and accessibility
  */
 
-import React, { memo, useCallback, useMemo } from 'react';
+import React, { memo, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
   Pressable,
   Platform,
   useWindowDimensions,
-} from 'react-native';
+} from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -19,11 +19,11 @@ import Animated, {
   withTiming,
   interpolate,
   Extrapolation,
-} from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
-import * as Haptics from 'expo-haptics';
-import { FeatureConfig } from './types';
+} from "react-native-reanimated";
+import { LinearGradient } from "expo-linear-gradient";
+import { BlurView } from "expo-blur";
+import * as Haptics from "expo-haptics";
+import { FeatureConfig } from "./types";
 
 // ─────────────────────────────────────────────────────────────
 // ANIMATED PRESSABLE COMPONENT
@@ -34,7 +34,7 @@ interface AnimatedFeatureCardProps {
   onPress: (feature: FeatureConfig) => void;
   onLongPress?: (feature: FeatureConfig) => void;
   isFavorite?: boolean;
-  size?: 'small' | 'medium' | 'large';
+  size?: "small" | "medium" | "large";
 }
 
 const AnimatedFeatureCard: React.FC<AnimatedFeatureCardProps> = ({
@@ -42,14 +42,14 @@ const AnimatedFeatureCard: React.FC<AnimatedFeatureCardProps> = ({
   onPress,
   onLongPress,
   isFavorite = false,
-  size = 'medium',
+  size = "medium",
 }) => {
   const { width: screenWidth } = useWindowDimensions();
-  
+
   // Animation values
   const pressed = useSharedValue(0);
   const scale = useSharedValue(1);
-  
+
   // Calculate card dimensions
   const cardWidth = useMemo(() => {
     const padding = 32;
@@ -58,7 +58,7 @@ const AnimatedFeatureCard: React.FC<AnimatedFeatureCardProps> = ({
     return (screenWidth - padding * 2 - gap * (columns - 1)) / columns;
   }, [screenWidth]);
 
-  const cardHeight = size === 'large' ? 160 : size === 'small' ? 100 : 130;
+  const cardHeight = size === "large" ? 160 : size === "small" ? 100 : 130;
 
   // Handle press
   const handlePress = useCallback(() => {
@@ -95,7 +95,7 @@ const AnimatedFeatureCard: React.FC<AnimatedFeatureCardProps> = ({
           pressed.value,
           [0, 1],
           [0, 2],
-          Extrapolation.CLAMP
+          Extrapolation.CLAMP,
         ),
       },
     ],
@@ -105,19 +105,21 @@ const AnimatedFeatureCard: React.FC<AnimatedFeatureCardProps> = ({
     opacity: interpolate(pressed.value, [0, 1], [0, 0.3]),
     transform: [
       {
-        translateX: interpolate(
-          pressed.value,
-          [0, 1],
-          [-cardWidth, cardWidth]
-        ),
+        translateX: interpolate(pressed.value, [0, 1], [-cardWidth, cardWidth]),
       },
     ],
   }));
 
-  const gradientColors = feature.gradient || ['#667EEA', '#764BA2'];
+  const gradientColors = feature.gradient || ["#667EEA", "#764BA2"];
 
   return (
-    <Animated.View style={[styles.cardContainer, { width: cardWidth, height: cardHeight }, animatedContainerStyle]}>
+    <Animated.View
+      style={[
+        styles.cardContainer,
+        { width: cardWidth, height: cardHeight },
+        animatedContainerStyle,
+      ]}
+    >
       <Pressable
         onPress={handlePress}
         onLongPress={handleLongPress}
@@ -137,11 +139,7 @@ const AnimatedFeatureCard: React.FC<AnimatedFeatureCardProps> = ({
         />
 
         {/* Glassmorphism Overlay */}
-        <BlurView
-          intensity={20}
-          tint="light"
-          style={StyleSheet.absoluteFill}
-        />
+        <BlurView intensity={20} tint="light" style={StyleSheet.absoluteFill} />
 
         {/* Content */}
         <View style={styles.content}>
@@ -172,16 +170,12 @@ const AnimatedFeatureCard: React.FC<AnimatedFeatureCardProps> = ({
           </Text>
 
           {/* Title */}
-          <Text
-            style={styles.title}
-            numberOfLines={2}
-            adjustsFontSizeToFit
-          >
+          <Text style={styles.title} numberOfLines={2} adjustsFontSizeToFit>
             {feature.title}
           </Text>
 
           {/* Description */}
-          {size !== 'small' && (
+          {size !== "small" && (
             <Text style={styles.description} numberOfLines={2}>
               {feature.description}
             </Text>
@@ -199,7 +193,7 @@ const AnimatedFeatureCard: React.FC<AnimatedFeatureCardProps> = ({
         )}
 
         {/* Coming soon overlay */}
-        {feature.status === 'coming_soon' && (
+        {feature.status === "coming_soon" && (
           <View style={styles.comingSoonOverlay}>
             <Text style={styles.comingSoonText}>Coming Soon</Text>
           </View>
@@ -221,7 +215,7 @@ const FeatureCard = memo(AnimatedFeatureCard, (prevProps, nextProps) => {
   );
 });
 
-FeatureCard.displayName = 'FeatureCard';
+FeatureCard.displayName = "FeatureCard";
 
 // ─────────────────────────────────────────────────────────────
 // STYLES
@@ -230,10 +224,10 @@ FeatureCard.displayName = 'FeatureCard';
 const styles = StyleSheet.create({
   cardContainer: {
     borderRadius: 20,
-    overflow: 'hidden',
+    overflow: "hidden",
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
+        shadowColor: "#000",
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.15,
         shadowRadius: 12,
@@ -246,40 +240,40 @@ const styles = StyleSheet.create({
   pressable: {
     flex: 1,
     borderRadius: 20,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   content: {
     flex: 1,
     padding: 16,
-    justifyContent: 'flex-end',
+    justifyContent: "flex-end",
   },
   badge: {
-    position: 'absolute',
+    position: "absolute",
     top: 12,
     right: 12,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
   badgeText: {
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 0.5,
   },
   favoriteIndicator: {
-    position: 'absolute',
+    position: "absolute",
     top: 12,
     left: 12,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: "rgba(255,255,255,0.2)",
     borderRadius: 12,
     width: 24,
     height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   favoriteIcon: {
     fontSize: 12,
@@ -290,51 +284,55 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 15,
-    fontWeight: '700',
-    color: '#fff',
-    textShadowColor: 'rgba(0,0,0,0.2)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
+    fontWeight: "700",
+    color: "#fff",
+    ...(Platform.OS === "web"
+      ? ({ textShadow: "0px 1px 4px rgba(0,0,0,0.2)" } as any)
+      : {
+          textShadowColor: "rgba(0,0,0,0.2)",
+          textShadowOffset: { width: 0, height: 1 },
+          textShadowRadius: 4,
+        }),
   },
   description: {
     fontSize: 12,
-    fontWeight: '500',
-    color: 'rgba(255,255,255,0.85)',
+    fontWeight: "500",
+    color: "rgba(255,255,255,0.85)",
     marginTop: 4,
   },
   shine: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: "rgba(255,255,255,0.3)",
   },
   premiumOverlay: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(139, 92, 246, 0.8)',
+    backgroundColor: "rgba(139, 92, 246, 0.8)",
     paddingVertical: 4,
-    alignItems: 'center',
+    alignItems: "center",
   },
   premiumText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 1,
   },
   comingSoonOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   comingSoonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
     letterSpacing: 0.5,
   },
 });
@@ -343,11 +341,11 @@ const styles = StyleSheet.create({
 // SKELETON COMPONENT
 // ─────────────────────────────────────────────────────────────
 
-export const FeatureCardSkeleton: React.FC<{ size?: 'small' | 'medium' | 'large' }> = ({
-  size = 'medium',
-}) => {
+export const FeatureCardSkeleton: React.FC<{
+  size?: "small" | "medium" | "large";
+}> = ({ size = "medium" }) => {
   const { width: screenWidth } = useWindowDimensions();
-  
+
   const cardWidth = useMemo(() => {
     const padding = 32;
     const gap = 16;
@@ -355,7 +353,7 @@ export const FeatureCardSkeleton: React.FC<{ size?: 'small' | 'medium' | 'large'
     return (screenWidth - padding * 2 - gap * (columns - 1)) / columns;
   }, [screenWidth]);
 
-  const cardHeight = size === 'large' ? 160 : size === 'small' ? 100 : 130;
+  const cardHeight = size === "large" ? 160 : size === "small" ? 100 : 130;
 
   return (
     <View
@@ -374,16 +372,16 @@ export const FeatureCardSkeleton: React.FC<{ size?: 'small' | 'medium' | 'large'
 
 const skeletonStyles = StyleSheet.create({
   container: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: "rgba(255,255,255,0.1)",
   },
   shimmer: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: "rgba(255,255,255,0.05)",
   },
   shimmerLine: {
     flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    transform: [{ skewX: '-20deg' }],
+    backgroundColor: "rgba(255,255,255,0.1)",
+    transform: [{ skewX: "-20deg" }],
   },
 });
 

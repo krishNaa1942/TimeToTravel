@@ -4,14 +4,14 @@
  * Provides type-safe navigation from anywhere in the app
  */
 
-import { createNavigationContainerRef } from '@react-navigation/native';
-import { RootStackParamList, NavigationState } from './types';
+import { createNavigationContainerRef } from "@react-navigation/native";
+import { RootStackParamList, NavigationState } from "./types";
 
 // Create stable navigation ref outside React
 export const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
 // Navigation state persistence key
-const NAVIGATION_STATE_KEY = '@nav_state';
+const NAVIGATION_STATE_KEY = "@nav_state";
 
 // Track if navigation is ready
 let isNavigationReady = false;
@@ -34,7 +34,7 @@ export class NavigationService {
   static setReady(ready: boolean): void {
     isNavigationReady = ready;
     if (ready && pendingActions.length > 0) {
-      pendingActions.forEach(action => action());
+      pendingActions.forEach((action) => action());
       pendingActions = [];
     }
   }
@@ -55,11 +55,11 @@ export class NavigationService {
    */
   static navigate<RouteName extends keyof RootStackParamList>(
     name: RouteName,
-    params?: RootStackParamList[RouteName]
+    params?: RootStackParamList[RouteName],
   ): void {
     this.whenReady(() => {
       if (navigationRef.isReady()) {
-        navigationRef.navigate(name, params as any);
+        (navigationRef as any).navigate(name, params);
       }
     });
   }
@@ -80,13 +80,13 @@ export class NavigationService {
    */
   static reset<RouteName extends keyof RootStackParamList>(
     name: RouteName,
-    params?: RootStackParamList[RouteName]
+    params?: RootStackParamList[RouteName],
   ): void {
     this.whenReady(() => {
       if (navigationRef.isReady()) {
         navigationRef.reset({
           index: 0,
-          routes: [{ name, params: params as any }],
+          routes: [{ name: name as never, params: params as never }],
         });
       }
     });
@@ -97,12 +97,12 @@ export class NavigationService {
    */
   static replace<RouteName extends keyof RootStackParamList>(
     name: RouteName,
-    params?: RootStackParamList[RouteName]
+    params?: RootStackParamList[RouteName],
   ): void {
     this.whenReady(() => {
       if (navigationRef.isReady()) {
         navigationRef.dispatch({
-          type: 'REPLACE',
+          type: "REPLACE",
           payload: { name, params: params as any },
         });
       }
@@ -114,13 +114,13 @@ export class NavigationService {
    */
   static push<RouteName extends keyof RootStackParamList>(
     name: RouteName,
-    params?: RootStackParamList[RouteName]
+    params?: RootStackParamList[RouteName],
   ): void {
     this.whenReady(() => {
       if (navigationRef.isReady()) {
         navigationRef.dispatch({
-          type: 'PUSH',
-          payload: { name, params: params as any },
+          type: "PUSH",
+          payload: { name: name as never, params: params as never },
         });
       }
     });
@@ -133,7 +133,7 @@ export class NavigationService {
     this.whenReady(() => {
       if (navigationRef.isReady()) {
         navigationRef.dispatch({
-          type: 'POP',
+          type: "POP",
           payload: { count },
         });
       }
@@ -147,7 +147,7 @@ export class NavigationService {
     this.whenReady(() => {
       if (navigationRef.isReady()) {
         navigationRef.dispatch({
-          type: 'POP_TO_TOP',
+          type: "POP_TO_TOP",
         });
       }
     });
@@ -167,8 +167,9 @@ export class NavigationService {
   /**
    * Get current route params
    */
-  static getCurrentParams<RouteName extends keyof RootStackParamList>(): 
-    RootStackParamList[RouteName] | undefined {
+  static getCurrentParams<RouteName extends keyof RootStackParamList>():
+    | RootStackParamList[RouteName]
+    | undefined {
     if (navigationRef.isReady()) {
       const route = navigationRef.getCurrentRoute();
       return route?.params as RootStackParamList[RouteName] | undefined;
@@ -197,14 +198,14 @@ export class NavigationService {
    * Navigate to Auth stack
    */
   static navigateToAuth(): void {
-    this.reset('Auth');
+    this.reset("Auth");
   }
 
   /**
    * Navigate to Main app
    */
   static navigateToMain(): void {
-    this.reset('MainTabs');
+    this.reset("MainTabs");
   }
 
   /**
@@ -213,23 +214,23 @@ export class NavigationService {
   static navigateToPath(path: string, params?: Record<string, any>): void {
     // Route mapping for deep links
     const routeMap: Record<string, keyof RootStackParamList> = {
-      'destination': 'DestinationDetail',
-      'budget': 'Budget',
-      'itinerary': 'Itinerary',
-      'packing': 'Packing',
-      'favorites': 'Favorites',
-      'currency': 'Currency',
-      'compare': 'Compare',
-      'places': 'Places',
-      'route': 'RoutePlanner',
-      'workspace': 'TripWorkspace',
-      'expenses': 'Expenses',
-      'journal': 'TravelJournal',
-      'reservations': 'Reservations',
-      'sharing': 'TripSharing',
-      'news': 'NewsFeed',
-      'stats': 'TravelStats',
-      'phrasebook': 'Phrasebook',
+      destination: "DestinationDetail",
+      budget: "Budget",
+      itinerary: "Itinerary",
+      packing: "Packing",
+      favorites: "Favorites",
+      currency: "Currency",
+      compare: "Compare",
+      places: "Places",
+      route: "RoutePlanner",
+      workspace: "TripWorkspace",
+      expenses: "Expenses",
+      journal: "TravelJournal",
+      reservations: "Reservations",
+      sharing: "TripSharing",
+      news: "NewsFeed",
+      stats: "TravelStats",
+      phrasebook: "Phrasebook",
     };
 
     const routeName = routeMap[path.toLowerCase()];
@@ -249,7 +250,7 @@ export class NavigationService {
         return true;
       }
     } catch (error) {
-      console.error('[Navigation] Failed to handle deep link:', error);
+      console.error("[Navigation] Failed to handle deep link:", error);
     }
     return false;
   }
@@ -257,15 +258,18 @@ export class NavigationService {
   /**
    * Parse deep link URL
    */
-  private static parseDeepLink(url: string): { route: string; params: Record<string, any> } | null {
+  private static parseDeepLink(
+    url: string,
+  ): { route: string; params: Record<string, any> } | null {
     // Support formats: timetravel://destination/agra, https://timetravel.app/destination/agra
-    const urlRegex = /^(?:timetravel:\/\/|https?:\/\/timetravel\.app\/)([^\/]+)\/?(.+)?$/;
+    const urlRegex =
+      /^(?:timetravel:\/\/|https?:\/\/timetravel\.app\/)([^\/]+)\/?(.+)?$/;
     const match = url.match(urlRegex);
-    
+
     if (match) {
       const [, route, paramStr] = match;
       const params: Record<string, any> = {};
-      
+
       if (paramStr) {
         // Parse query params
         const queryMatch = paramStr.match(/\?(.+)$/);
@@ -279,10 +283,10 @@ export class NavigationService {
           params.id = paramStr;
         }
       }
-      
+
       return { route, params };
     }
-    
+
     return null;
   }
 }

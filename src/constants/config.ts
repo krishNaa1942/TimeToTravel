@@ -43,9 +43,15 @@ function isPrivateHost(host: string): boolean {
 }
 
 function getExpoHost(): string | null {
+  const expoConfig = Constants.expoConfig as
+    | (typeof Constants.expoConfig & {
+        debuggerHost?: string;
+      })
+    | undefined;
+
   const hostCandidates = [
-    Constants.expoConfig?.hostUri,
-    Constants.expoConfig?.debuggerHost,
+    expoConfig?.hostUri,
+    expoConfig?.debuggerHost,
     (Constants as any)?.manifest2?.debuggerHost,
     (Constants as any)?.manifest?.debuggerHost,
   ];

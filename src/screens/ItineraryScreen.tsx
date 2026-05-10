@@ -618,7 +618,9 @@ export default function ItineraryScreen() {
       </MapComponent>
 
       {/* Floating Header */}
-      <SafeAreaView style={styles.headerOverlay} pointerEvents="box-none">
+      <SafeAreaView
+        style={[styles.headerOverlay, { pointerEvents: "box-none" } as any]}
+      >
         <PressableScale
           style={styles.backBtn}
           onPress={() => navigation.goBack()}
