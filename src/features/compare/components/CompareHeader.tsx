@@ -49,7 +49,7 @@ const PRIORITIES: Array<{
   { value: "safety", label: "Safety", icon: "shield-check" },
   { value: "weather", label: "Weather", icon: "weather-partly-cloudy" },
   { value: "crowd", label: "Crowd", icon: "account-group-outline" },
-  { value: "experience", label: "Experience", icon: "sparkles" },
+  { value: "experience", label: "Experience", icon: "star" },
 ] as const;
 
 const PriorityPill = memo(

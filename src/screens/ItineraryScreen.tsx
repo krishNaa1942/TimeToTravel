@@ -618,8 +618,11 @@ export default function ItineraryScreen() {
       </MapComponent>
 
       {/* Floating Header */}
-      <SafeAreaView
-        style={[styles.headerOverlay, { pointerEvents: "box-none" } as any]}
+      <View
+        style={[
+          styles.headerOverlay,
+          { paddingTop: insets.top, pointerEvents: "box-none" } as any,
+        ]}
       >
         <PressableScale
           style={styles.backBtn}
@@ -639,7 +642,7 @@ export default function ItineraryScreen() {
             <Text style={styles.cachePillText}>⚡ From cache</Text>
           </GlassCard>
         )}
-      </SafeAreaView>
+      </View>
 
       {/* Bottom Sheet */}
       <BottomSheet
@@ -792,6 +795,50 @@ const mapStyle = [
 // STYLES
 // ─────────────────────────────────────────────────────────────
 
+const headerShadow =
+  Platform.select({
+    web: { boxShadow: "0px 2px 10px rgba(0, 0, 0, 0.1)" } as any,
+    default: {
+      shadowColor: "#000",
+      shadowOpacity: 0.1,
+      shadowRadius: 10,
+      elevation: 4,
+    },
+  }) ?? {};
+
+const intentBarShadow =
+  Platform.select({
+    web: { boxShadow: "0px 2px 10px rgba(0, 0, 0, 0.05)" } as any,
+    default: {
+      shadowColor: "#000",
+      shadowOpacity: 0.05,
+      shadowRadius: 10,
+      elevation: 2,
+    },
+  }) ?? {};
+
+const activityCardShadow =
+  Platform.select({
+    web: { boxShadow: "0px 1px 5px rgba(0, 0, 0, 0.02)" } as any,
+    default: {
+      shadowColor: "#000",
+      shadowOpacity: 0.02,
+      shadowRadius: 5,
+      elevation: 1,
+    },
+  }) ?? {};
+
+const markerShadow =
+  Platform.select({
+    web: { boxShadow: "0px 0px 4px rgba(0, 0, 0, 0.2)" } as any,
+    default: {
+      shadowColor: "#000",
+      shadowOpacity: 0.2,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+  }) ?? {};
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#E2E8F0" },
 
@@ -813,10 +860,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.95)",
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 4,
+    ...headerShadow,
   },
   backBtnText: { fontSize: 24, fontWeight: "600", color: "#0F172A" },
   loadingPill: {
@@ -868,10 +912,7 @@ const styles = StyleSheet.create({
     height: 56,
     alignItems: "center",
     paddingHorizontal: 16,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
+    ...intentBarShadow,
   },
   aiIcon: { fontSize: 20, marginRight: 10 },
   sheetSearchInput: {
@@ -1005,10 +1046,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     marginBottom: 8,
-    shadowColor: "#000",
-    shadowOpacity: 0.02,
-    shadowRadius: 5,
-    elevation: 1,
+    ...activityCardShadow,
   },
   actHeader: {
     flexDirection: "row",
@@ -1069,10 +1107,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 2,
     borderColor: "#FFF",
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
+    ...markerShadow,
   },
   markerText: { color: "#FFF", fontSize: 12, fontWeight: "900" },
 });

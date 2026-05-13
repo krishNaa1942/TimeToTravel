@@ -2,7 +2,7 @@
  * QuickActionsGrid Component - Grid of quick action buttons
  */
 import React, { memo, useCallback } from "react";
-import { View, Text, StyleSheet, Pressable } from "react-native";
+import { View, Text, StyleSheet, Pressable, Platform } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { useUIStore } from "@/stores/uiStore";
@@ -74,6 +74,20 @@ const QuickActionsGridComponent: React.FC<QuickActionsGridProps> = ({
   );
 };
 
+const cardShadow =
+  Platform.select({
+    web: {
+      boxShadow: "0px 2px 8px rgba(0, 0, 0, 0.1)",
+    } as any,
+    default: {
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+      elevation: 4,
+    },
+  }) ?? {};
+
 const styles = StyleSheet.create({
   container: {
     backgroundColor: "#FFFFFF",
@@ -81,11 +95,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginHorizontal: 16,
     marginVertical: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    ...cardShadow,
   },
   containerDark: { backgroundColor: "#1F2937" },
   title: {

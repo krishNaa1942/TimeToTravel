@@ -20,6 +20,7 @@ import React, {
 import {
   ActivityIndicator,
   InteractionManager,
+  Platform,
   StyleSheet,
   Text,
   View,
@@ -71,6 +72,19 @@ export type BottomTabParamList = {
 
 const Tab = createBottomTabNavigator<BottomTabParamList>();
 
+const tabBarShadow =
+  Platform.select({
+    web: {
+      boxShadow: "0px -4px 12px rgba(0, 0, 0, 0.1)",
+    } as any,
+    default: {
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: -4 },
+      shadowOpacity: 0.1,
+      shadowRadius: 12,
+      elevation: 10,
+    },
+  }) ?? {};
 interface TabErrorBoundaryProps {
   children: ReactNode;
   fallbackMessage: string;
@@ -436,11 +450,7 @@ const styles = StyleSheet.create({
   tabBar: {
     borderTopWidth: 1,
     paddingTop: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 10,
+    ...tabBarShadow,
   },
   tabBarItem: {
     paddingTop: 4,

@@ -29,18 +29,19 @@ export const PressableScale = ({
   } = props;
   const scale = useRef(new Animated.Value(1)).current;
   const useNativeDriver = Platform.OS !== "web";
+  const springAnimationProps = { useNativeDriver };
 
   const onPressIn = useCallback(
     (e: any) => {
       onPressInProp?.(e);
       Animated.spring(scale, {
         toValue: activeScale,
-        useNativeDriver,
         tension: 100,
         friction: 10,
+        ...springAnimationProps,
       }).start();
     },
-    [activeScale, onPressInProp, scale, useNativeDriver],
+    [activeScale, onPressInProp, scale, springAnimationProps],
   );
 
   const onPressOut = useCallback(
@@ -48,12 +49,12 @@ export const PressableScale = ({
       onPressOutProp?.(e);
       Animated.spring(scale, {
         toValue: 1,
-        useNativeDriver,
         tension: 100,
         friction: 10,
+        ...springAnimationProps,
       }).start();
     },
-    [onPressOutProp, scale, useNativeDriver],
+    [onPressOutProp, scale, springAnimationProps],
   );
 
   return (

@@ -1,7 +1,19 @@
 import React, { memo } from "react";
-import { Linking, StyleSheet, View } from "react-native";
+import {
+  Linking,
+  Platform,
+  Pressable,
+  StyleSheet,
+  TextInput as NativeTextInput,
+  View,
+} from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { Button, Checkbox, Text, TextInput } from "react-native-paper";
+import {
+  Button,
+  Checkbox,
+  Text,
+  TextInput as PaperTextInput,
+} from "react-native-paper";
 
 import { PressableScale } from "@/components/UI/PressableScale";
 import { colors, spacing } from "@/theme/colors";
@@ -180,9 +192,52 @@ function Field({
   keyboardType?: "default" | "email-address" | "visible-password";
   autoCapitalize?: "none" | "sentences" | "words" | "characters";
 }) {
+  if (Platform.OS === "web") {
+    return (
+      <View style={styles.fieldWrap}>
+        <Text style={styles.webFieldLabel}>{label}</Text>
+        <View
+          style={[styles.webFieldShell, error && styles.webFieldShellError]}
+        >
+          <MaterialCommunityIcons
+            name={icon as any}
+            size={18}
+            color={colors.textSecondary}
+          />
+          <NativeTextInput
+            value={value}
+            onChangeText={onChangeText}
+            autoCapitalize={autoCapitalize}
+            keyboardType={keyboardType}
+            secureTextEntry={secureTextEntry && !visible}
+            autoCorrect={false}
+            placeholder={label}
+            placeholderTextColor="#94A3B8"
+            style={styles.webFieldInput}
+          />
+          {showToggle ? (
+            <Pressable
+              onPress={onToggle}
+              hitSlop={8}
+              accessibilityRole="button"
+            >
+              <MaterialCommunityIcons
+                name={visible ? "eye-off" : "eye"}
+                size={18}
+                color={colors.textSecondary}
+              />
+            </Pressable>
+          ) : null}
+        </View>
+
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      </View>
+    );
+  }
+
   return (
     <View style={styles.fieldWrap}>
-      <TextInput
+      <PaperTextInput
         mode="outlined"
         label={label}
         value={value}
@@ -194,10 +249,10 @@ function Field({
         outlineColor="rgba(148, 163, 184, 0.45)"
         activeOutlineColor={colors.primary}
         error={Boolean(error)}
-        left={<TextInput.Icon icon={icon} color={colors.textSecondary} />}
+        left={<PaperTextInput.Icon icon={icon} color={colors.textSecondary} />}
         right={
           showToggle ? (
-            <TextInput.Icon
+            <PaperTextInput.Icon
               icon={visible ? "eye-off" : "eye"}
               onPress={onToggle}
               color={colors.textSecondary}
@@ -439,6 +494,20 @@ export const AuthFormCard = memo(function AuthFormCard({
   );
 });
 
+const cardShadow =
+  Platform.select({
+    web: {
+      boxShadow: "0px 20px 32px rgba(2, 6, 23, 0.18)",
+    } as any,
+    default: {
+      shadowColor: "#020617",
+      shadowOffset: { width: 0, height: 20 },
+      shadowOpacity: 0.18,
+      shadowRadius: 32,
+      elevation: 6,
+    },
+  }) ?? {};
+
 const styles = StyleSheet.create({
   card: {
     marginHorizontal: spacing.lg,
@@ -447,11 +516,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "rgba(148, 163, 184, 0.18)",
-    shadowColor: "#020617",
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.18,
-    shadowRadius: 32,
-    elevation: 6,
+    ...cardShadow,
     overflow: "hidden",
   },
   cardGlow: {
@@ -558,6 +623,34 @@ const styles = StyleSheet.create({
   field: {
     backgroundColor: "#F8FAFC",
     borderRadius: 18,
+  },
+  webFieldLabel: {
+    color: "#475569",
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.4,
+  },
+  webFieldShell: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    minHeight: 52,
+    paddingHorizontal: 14,
+    borderRadius: 18,
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "rgba(148, 163, 184, 0.45)",
+  },
+  webFieldShellError: {
+    borderColor: colors.error,
+  },
+  webFieldInput: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 16,
+    color: "#0F172A",
+    paddingVertical: 10,
+    paddingHorizontal: 0,
   },
   errorText: {
     color: colors.error,

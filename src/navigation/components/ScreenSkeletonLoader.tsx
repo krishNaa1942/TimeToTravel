@@ -3,17 +3,26 @@
  * Animated skeleton UI for navigation transitions
  */
 
-import React, { memo, useEffect, useRef } from 'react';
-import { View, StyleSheet, Animated, Dimensions } from 'react-native';
+import React, { memo, useEffect, useRef } from "react";
+import { View, StyleSheet, Animated, Dimensions, Platform } from "react-native";
 
-const { width } = Dimensions.get('window');
+const { width } = Dimensions.get("window");
 
 // ─────────────────────────────────────────────────────────────
 // SHIMMER EFFECT
 // ─────────────────────────────────────────────────────────────
 
-function Shimmer({ width: w, height, borderRadius }: { width: number; height: number; borderRadius?: number }) {
+function Shimmer({
+  width: w,
+  height,
+  borderRadius,
+}: {
+  width: number;
+  height: number;
+  borderRadius?: number;
+}) {
   const shimmerValue = useRef(new Animated.Value(0)).current;
+  const useNativeDriver = Platform.OS !== "web";
 
   useEffect(() => {
     Animated.loop(
@@ -21,16 +30,16 @@ function Shimmer({ width: w, height, borderRadius }: { width: number; height: nu
         Animated.timing(shimmerValue, {
           toValue: 1,
           duration: 1000,
-          useNativeDriver: true,
+          useNativeDriver,
         }),
         Animated.timing(shimmerValue, {
           toValue: 0,
           duration: 1000,
-          useNativeDriver: true,
+          useNativeDriver,
         }),
-      ])
+      ]),
     ).start();
-  }, [shimmerValue]);
+  }, [shimmerValue, useNativeDriver]);
 
   const opacity = shimmerValue.interpolate({
     inputRange: [0, 1],
@@ -96,16 +105,16 @@ export const ScreenSkeletonLoader = memo(function ScreenSkeletonLoader() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: "#0F172A",
     paddingTop: 60,
     paddingHorizontal: 16,
   },
   shimmer: {
-    backgroundColor: '#1E293B',
+    backgroundColor: "#1E293B",
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 24,
     gap: 12,
   },
@@ -117,12 +126,12 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   cardRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 16,
   },
   listItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
   },
   listItemContent: {

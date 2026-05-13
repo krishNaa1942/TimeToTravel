@@ -4,7 +4,7 @@
  */
 
 import React, { memo } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, Platform } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { useUIStore } from "@/stores/uiStore";
 import { PERSONALITY_CONFIG } from "../utils/profileHelpers";
@@ -90,6 +90,20 @@ const TravelDNACardComponent: React.FC<TravelDNACardProps> = ({
   );
 };
 
+const cardShadow =
+  Platform.select({
+    web: {
+      boxShadow: "0px 2px 8px rgba(0, 0, 0, 0.1)",
+    } as any,
+    default: {
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+      elevation: 4,
+    },
+  }) ?? {};
+
 const styles = StyleSheet.create({
   container: {
     backgroundColor: "#FFFFFF",
@@ -97,11 +111,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginHorizontal: 16,
     marginVertical: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    ...cardShadow,
   },
   containerDark: { backgroundColor: "#1F2937" },
   header: { flexDirection: "row", alignItems: "center", marginBottom: 16 },

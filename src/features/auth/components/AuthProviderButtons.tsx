@@ -1,5 +1,5 @@
 import React, { memo } from "react";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { ActivityIndicator, StyleSheet, View, Platform } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Text } from "react-native-paper";
 
@@ -80,6 +80,20 @@ function ProviderButton({
   );
 }
 
+const buttonShadow =
+  Platform.select({
+    web: {
+      boxShadow: "0px 8px 12px rgba(15, 23, 42, 0.05)",
+    } as any,
+    default: {
+      shadowColor: "#0F172A",
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.05,
+      shadowRadius: 12,
+      elevation: 2,
+    },
+  }) ?? {};
+
 export const AuthProviderButtons = memo(function AuthProviderButtons({
   onGooglePress,
   onApplePress,
@@ -128,11 +142,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(148, 163, 184, 0.16)",
     backgroundColor: "rgba(255,255,255,0.88)",
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 2,
+    ...buttonShadow,
   },
   buttonEmphasized: {
     borderColor: "rgba(37, 99, 235, 0.14)",

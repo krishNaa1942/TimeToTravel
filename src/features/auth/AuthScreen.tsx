@@ -24,6 +24,7 @@ export default function AuthScreen() {
   const colorScheme = useColorScheme();
   const auth = useAuthScreen();
   const useNativeDriver = Platform.OS !== "web";
+  const animationProps = { useNativeDriver };
 
   const heroOpacity = useRef(new Animated.Value(0)).current;
   const heroTranslateY = useRef(new Animated.Value(20)).current;
@@ -34,25 +35,36 @@ export default function AuthScreen() {
   const ambientPulse = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    if (Platform.OS === "web") {
+      heroOpacity.setValue(1);
+      heroTranslateY.setValue(0);
+      heroScale.setValue(1);
+      cardOpacity.setValue(1);
+      cardTranslateY.setValue(0);
+      cardScale.setValue(1);
+      ambientPulse.setValue(0);
+      return;
+    }
+
     const intro = Animated.sequence([
       Animated.parallel([
         Animated.timing(heroOpacity, {
           toValue: 1,
           duration: 520,
           easing: Easing.out(Easing.cubic),
-          useNativeDriver,
+          ...animationProps,
         }),
         Animated.spring(heroTranslateY, {
           toValue: 0,
           tension: 60,
           friction: 11,
-          useNativeDriver,
+          ...animationProps,
         }),
         Animated.spring(heroScale, {
           toValue: 1,
           tension: 50,
           friction: 8,
-          useNativeDriver,
+          ...animationProps,
         }),
       ]),
       Animated.delay(140),
@@ -61,19 +73,19 @@ export default function AuthScreen() {
           toValue: 1,
           duration: 560,
           easing: Easing.out(Easing.cubic),
-          useNativeDriver,
+          ...animationProps,
         }),
         Animated.spring(cardTranslateY, {
           toValue: 0,
           tension: 64,
           friction: 11,
-          useNativeDriver,
+          ...animationProps,
         }),
         Animated.spring(cardScale, {
           toValue: 1,
           tension: 48,
           friction: 9,
-          useNativeDriver,
+          ...animationProps,
         }),
       ]),
     ]);
@@ -84,13 +96,13 @@ export default function AuthScreen() {
           toValue: 1,
           duration: 7000,
           easing: Easing.inOut(Easing.quad),
-          useNativeDriver,
+          ...animationProps,
         }),
         Animated.timing(ambientPulse, {
           toValue: 0,
           duration: 7000,
           easing: Easing.inOut(Easing.quad),
-          useNativeDriver,
+          ...animationProps,
         }),
       ]),
     );
@@ -269,6 +281,45 @@ export default function AuthScreen() {
   );
 }
 
+const topGlowShadow =
+  Platform.select({
+    web: {
+      boxShadow: "0px 0px 80px rgba(37, 99, 235, 0.32)",
+    } as any,
+    default: {
+      shadowColor: "#2563EB",
+      shadowOpacity: 0.32,
+      shadowRadius: 80,
+      shadowOffset: { width: 0, height: 18 },
+    },
+  }) ?? {};
+
+const bottomGlowShadow =
+  Platform.select({
+    web: {
+      boxShadow: "0px 0px 92px rgba(14, 165, 233, 0.28)",
+    } as any,
+    default: {
+      shadowColor: "#0EA5E9",
+      shadowOpacity: 0.28,
+      shadowRadius: 92,
+      shadowOffset: { width: 0, height: 24 },
+    },
+  }) ?? {};
+
+const connectorDotShadow =
+  Platform.select({
+    web: {
+      boxShadow: "0px 0px 14px rgba(96, 165, 250, 0.45)",
+    } as any,
+    default: {
+      shadowColor: "#60A5FA",
+      shadowOpacity: 0.45,
+      shadowRadius: 14,
+      shadowOffset: { width: 0, height: 0 },
+    },
+  }) ?? {};
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -285,10 +336,7 @@ const styles = StyleSheet.create({
     height: 240,
     borderRadius: 120,
     backgroundColor: "rgba(37, 99, 235, 0.24)",
-    shadowColor: "#2563EB",
-    shadowOpacity: 0.32,
-    shadowRadius: 80,
-    shadowOffset: { width: 0, height: 18 },
+    ...topGlowShadow,
   },
   bottomGlow: {
     position: "absolute",
@@ -298,10 +346,7 @@ const styles = StyleSheet.create({
     height: 280,
     borderRadius: 140,
     backgroundColor: "rgba(14, 165, 233, 0.12)",
-    shadowColor: "#0EA5E9",
-    shadowOpacity: 0.28,
-    shadowRadius: 92,
-    shadowOffset: { width: 0, height: 24 },
+    ...bottomGlowShadow,
   },
   centerWash: {
     position: "absolute",
@@ -333,10 +378,7 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 999,
     backgroundColor: "rgba(96, 165, 250, 0.95)",
-    shadowColor: "#60A5FA",
-    shadowOpacity: 0.45,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 0 },
+    ...connectorDotShadow,
     marginBottom: 8,
   },
   connectorLine: {

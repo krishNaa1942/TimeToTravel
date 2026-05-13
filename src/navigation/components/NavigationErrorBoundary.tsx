@@ -16,6 +16,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Animated,
+  Platform,
 } from "react-native";
 import { useNavigation, CommonActions } from "@react-navigation/native";
 
@@ -57,22 +58,23 @@ function ErrorFallback({
 }: ErrorFallbackProps) {
   const scaleAnim = React.useRef(new Animated.Value(0.9)).current;
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
+  const useNativeDriver = Platform.OS !== "web";
 
   React.useEffect(() => {
     Animated.parallel([
       Animated.spring(scaleAnim, {
         toValue: 1,
-        useNativeDriver: true,
+        useNativeDriver,
         tension: 50,
         friction: 7,
       }),
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 300,
-        useNativeDriver: true,
+        useNativeDriver,
       }),
     ]).start();
-  }, []);
+  }, [scaleAnim, fadeAnim, useNativeDriver]);
 
   return (
     <View style={styles.container}>

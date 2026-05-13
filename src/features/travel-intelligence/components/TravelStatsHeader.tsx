@@ -85,7 +85,7 @@ export const TravelStatsHeader = memo(
             <Button
               mode="contained"
               onPress={onOpenAssistant}
-              icon="sparkles"
+              icon="robot"
               style={styles.actionButton}
               contentStyle={styles.buttonContent}
             >
