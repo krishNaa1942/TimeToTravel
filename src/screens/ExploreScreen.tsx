@@ -60,6 +60,7 @@ import { GlassCard } from "@/components/UI/GlassCard";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const CARD_WIDTH = (SCREEN_WIDTH - spacing.lg * 2 - spacing.md) / 2;
+const shouldUseNativeDriver = Platform.OS !== "web";
 
 type NavProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -301,13 +302,13 @@ const CategoryPill = memo(
         Animated.timing(scaleAnim, {
           toValue: 0.95,
           duration: 50,
-          useNativeDriver: true,
+          useNativeDriver: shouldUseNativeDriver,
         }),
         Animated.spring(scaleAnim, {
           toValue: 1,
           tension: 300,
           friction: 20,
-          useNativeDriver: true,
+          useNativeDriver: shouldUseNativeDriver,
         }),
       ]).start();
       onPress();
@@ -596,13 +597,13 @@ const SearchOverlay = memo(
           Animated.timing(fadeAnim, {
             toValue: 1,
             duration: 200,
-            useNativeDriver: true,
+            useNativeDriver: shouldUseNativeDriver,
           }),
           Animated.timing(slideAnim, {
             toValue: 0,
             duration: 300,
             easing: Easing.out(Easing.cubic),
-            useNativeDriver: true,
+            useNativeDriver: shouldUseNativeDriver,
           }),
         ]).start();
       } else {
@@ -610,12 +611,12 @@ const SearchOverlay = memo(
           Animated.timing(fadeAnim, {
             toValue: 0,
             duration: 150,
-            useNativeDriver: true,
+            useNativeDriver: shouldUseNativeDriver,
           }),
           Animated.timing(slideAnim, {
             toValue: SCREEN_HEIGHT,
             duration: 200,
-            useNativeDriver: true,
+            useNativeDriver: shouldUseNativeDriver,
           }),
         ]).start();
       }

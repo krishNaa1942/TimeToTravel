@@ -14,6 +14,7 @@ import {
   Animated,
   Dimensions,
   FlatList,
+  Platform,
 } from "react-native";
 import { Text } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -23,6 +24,7 @@ import { currencyService, ConversionResult } from "@/services/currency";
 import { colors, spacing } from "@/theme/colors";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const shouldUseNativeDriver = Platform.OS !== "web";
 
 // ─────────────────────────────────────────────────────────────
 // CONSTANTS & DATA
@@ -90,6 +92,16 @@ const CURRENCY_STRENGTH: Record<string, number> = {
   CHF: 1.13,
   NZD: 0.60,
 };
+
+const swapBtnShadow =
+  (Platform.OS === "web"
+    ? { boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)" }
+    : { elevation: 4 }) as any;
+
+const resultHeroCardShadow =
+  (Platform.OS === "web"
+    ? { boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.1)" }
+    : { elevation: 8 }) as any;
 
 // ─────────────────────────────────────────────────────────────
 // UTILITY FUNCTIONS
@@ -162,8 +174,8 @@ const SwapButton = memo(({ onPress }: SwapButtonProps) => {
 
   const handlePress = () => {
     Animated.sequence([
-      Animated.timing(rotation, { toValue: 1, duration: 200, useNativeDriver: true }),
-      Animated.timing(rotation, { toValue: 0, duration: 0, useNativeDriver: true }),
+      Animated.timing(rotation, { toValue: 1, duration: 200, useNativeDriver: shouldUseNativeDriver }),
+      Animated.timing(rotation, { toValue: 0, duration: 0, useNativeDriver: shouldUseNativeDriver }),
     ]).start();
     onPress();
   };
@@ -214,8 +226,8 @@ const ResultHeroCard = memo(({ result, fromInfo, toInfo, insight, strengthInfo }
 
   useEffect(() => {
     Animated.parallel([
-      Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, tension: 100, friction: 8 }),
-      Animated.timing(opacityAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+      Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: shouldUseNativeDriver, tension: 100, friction: 8 }),
+      Animated.timing(opacityAnim, { toValue: 1, duration: 200, useNativeDriver: shouldUseNativeDriver }),
     ]).start();
   }, []);
 
@@ -766,11 +778,7 @@ const styles = StyleSheet.create({
     justifyContent: "center", 
     borderWidth: 2, 
     borderColor: colors.primary,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
+    ...swapBtnShadow,
   },
 
   // Recent Bar
@@ -801,11 +809,7 @@ const styles = StyleSheet.create({
     padding: 24, 
     borderWidth: 1, 
     borderColor: colors.border,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
+    ...resultHeroCardShadow,
   },
   resultFromRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
   resultFlag: { fontSize: 24 },

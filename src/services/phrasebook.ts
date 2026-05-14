@@ -8,7 +8,16 @@ export interface PhraseData {
   destination: string;
   language: string;
   script?: string;
-  phrases: { english: string; local: string; pronunciation?: string; category?: string }[];
+  phrases: {
+    id?: string;
+    english: string;
+    local: string;
+    pronunciation?: string;
+    transliteration?: string;
+    category?: string;
+    difficulty?: "beginner" | "intermediate" | "advanced";
+    tags?: string[];
+  }[];
 }
 
 export interface DestinationInfo {

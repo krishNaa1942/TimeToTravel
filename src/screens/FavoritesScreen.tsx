@@ -58,6 +58,26 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const CARD_WIDTH = SCREEN_WIDTH - spacing.lg * 2;
 const shouldUseNativeDriver = Platform.OS !== "web";
 
+const statsCardShadow =
+  (Platform.OS === "web"
+    ? { boxShadow: "0px 8px 16px rgba(103, 126, 234, 0.25)" }
+    : { elevation: 8 }) as any;
+
+const favCardShadow =
+  (Platform.OS === "web"
+    ? { boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.06)" }
+    : { elevation: 3 }) as any;
+
+const removeBtnShadow =
+  (Platform.OS === "web"
+    ? { boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)" }
+    : { elevation: 2 }) as any;
+
+const fabShadow =
+  (Platform.OS === "web"
+    ? { boxShadow: "0px 8px 16px rgba(102, 126, 234, 0.35)" }
+    : { elevation: 10 }) as any;
+
 type NavProp = NativeStackNavigationProp<RootStackParamList>;
 
 // ─────────────────────────────────────────────────────────────
@@ -1049,11 +1069,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     borderRadius: 20,
     overflow: "hidden",
-    shadowColor: "#667EEA",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 8,
+    ...statsCardShadow,
   },
   statsGradient: {
     padding: spacing.md,
@@ -1259,11 +1275,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderRadius: 20,
     overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 3,
+    ...favCardShadow,
     borderWidth: 1,
     borderColor: "rgba(0,0,0,0.04)",
   },
@@ -1365,11 +1377,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.9)",
     borderRadius: 20,
     padding: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    ...removeBtnShadow,
   },
 
   // Empty State
@@ -1448,11 +1456,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 14,
     borderRadius: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5,
+    ...(Platform.OS === "web"
+      ? { boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.2)" }
+      : { elevation: 5 }),
   },
   snackBarText: {
     fontSize: 14,
@@ -1478,11 +1484,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     gap: 8,
-    shadowColor: "#667EEA",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
-    elevation: 10,
+    ...fabShadow,
   },
   fabText: {
     fontSize: 16,

@@ -1,17 +1,18 @@
 /**
- * PhrasebookScreen V6 – AI Language Assistant
- * Next-generation real-time translation & voice system for travelers
+ * PhrasebookScreen V6 – Travel Language Assistant
+ * Next-generation phrase discovery and playback for travelers
  * 
  * Features:
- * - AI-powered phrase suggestions based on context
+ * - Context-aware phrase suggestions based on trip data
  * - Text-to-Speech (TTS) pronunciation
- * - Speech-to-Text (STT) voice input
  * - Smart category filtering
  * - Offline-first with AsyncStorage caching
  * - Bookmark & recently used phrases
- * - Fuzzy search with debounce
+ * - Ranked fuzzy search with debounce
  * - Skeleton loading states
  * - Glassmorphism UI design
+ * - Virtualized list rendering
+ * - Accessible controls and labels
  * - Haptic feedback
  */
 
@@ -23,11 +24,9 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
-  Dimensions,
-  RefreshControl,
-  Pressable,
   ScrollView,
 } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import { Text } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -35,18 +34,24 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { phrasebookService, PhraseData, DestinationInfo } from "@/services/phrasebook";
-import { colors, spacing } from "@/theme/colors";
+import { spacing } from "@/theme/colors";
 import { useTravelIntelligence } from "@/stores/travelIntelligenceStore";
 import { PressableScale } from "@/components/UI/PressableScale";
 import { GlassCard } from "@/components/UI/GlassCard";
 import { useDebounce } from "@/hooks/useDebounce";
+import { SearchEngine } from "@/features/phrasebook/services/SearchEngine";
+import type { Phrase as FeaturePhrase, PhraseCategory as FeaturePhraseCategory } from "@/features/phrasebook/types";
 
 // Phrase type definition
 interface Phrase {
+  id?: string;
   english: string;
   local: string;
   pronunciation?: string;
   category?: string;
+  transliteration?: string;
+  tags?: string[];
+  difficulty?: "beginner" | "intermediate" | "advanced";
 }
 
 // Polyfill for expo-haptics (graceful fallback)
@@ -78,7 +83,6 @@ const Speech = {
   },
 };
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CACHE_KEY = "@phrasebook_cache";
 const BOOKMARKS_KEY = "@phrasebook_bookmarks";
 const RECENT_KEY = "@phrasebook_recent";
@@ -88,9 +92,10 @@ const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
 // TYPES & CONSTANTS
 // ─────────────────────────────────────────────────────────────
 
-type Category = "all" | "greetings" | "food" | "transport" | "emergency" | "shopping" | "directions";
+type Category = FeaturePhraseCategory | "all";
 
 interface EnhancedPhrase extends Phrase {
+  id: string;
   isBookmarked?: boolean;
   isRecent?: boolean;
   contextScore?: number;
@@ -110,58 +115,113 @@ const CATEGORIES: { key: Category; label: string; icon: string; color: string; e
   { key: "emergency", label: "Emergency", icon: "alert-circle", color: "#EF4444", emoji: "🆘" },
   { key: "shopping", label: "Shopping", icon: "shopping", color: "#EC4899", emoji: "🛍️" },
   { key: "directions", label: "Directions", icon: "map-marker", color: "#06B6D4", emoji: "📍" },
+  { key: "accommodation", label: "Stay", icon: "bed", color: "#8B5CF6", emoji: "🛏️" },
+  { key: "health", label: "Health", icon: "heart-pulse", color: "#14B8A6", emoji: "🏥" },
+  { key: "social", label: "Social", icon: "account-group", color: "#6366F1", emoji: "🫶" },
+  { key: "money", label: "Money", icon: "cash-multiple", color: "#16A34A", emoji: "💵" },
+  { key: "time", label: "Time", icon: "clock-outline", color: "#64748B", emoji: "⏰" },
+  { key: "weather", label: "Weather", icon: "weather-sunny", color: "#F97316", emoji: "☀️" },
 ];
 
-const CONTEXT_PHRASES: Record<string, string[]> = {
-  restaurant: ["table", "order", "water", "bill", "menu", "delicious", "vegetarian"],
-  airport: ["gate", "flight", "boarding", "luggage", "passport", "visa"],
-  hotel: ["room", "checkout", "key", "breakfast", "wifi", "reservation"],
-  emergency: ["help", "doctor", "hospital", "police", "embassy", "emergency"],
+const normalizeCategory = (value?: string): Category | null => {
+  switch (value?.toLowerCase()) {
+    case "greetings":
+    case "food":
+    case "transport":
+    case "emergency":
+    case "shopping":
+    case "directions":
+    case "accommodation":
+    case "health":
+    case "social":
+    case "money":
+    case "time":
+    case "weather":
+      return value.toLowerCase() as Category;
+    default:
+      return null;
+  }
+};
+
+const resolvePhraseCategory = (phrase: Phrase): FeaturePhraseCategory => {
+  const directCategory = normalizeCategory(phrase.category);
+  if (directCategory && directCategory !== "all") {
+    return directCategory;
+  }
+
+  const text = [phrase.english, phrase.local, phrase.pronunciation, phrase.category, ...(phrase.tags || [])]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  if (/hello|hi|good morning|good evening|thank|please|sorry|excuse|goodbye|welcome/.test(text)) return "greetings";
+  if (/food|eat|drink|water|menu|restaurant|order|bill|vegetarian|spicy|meal|breakfast|lunch|dinner/.test(text)) return "food";
+  if (/bus|train|taxi|airport|station|ticket|flight|gate|boarding|subway|metro|ride|platform/.test(text)) return "transport";
+  if (/help|emergency|doctor|hospital|police|fire|ambulance|danger|lost|passport|sick|injury|poison/.test(text)) return "emergency";
+  if (/hotel|room|checkout|check-in|checkin|reservation|booking|stay|hostel|guesthouse|accommodation|bed|key/.test(text)) return "accommodation";
+  if (/doctor|medicine|pharmacy|clinic|hospital|pain|fever|allergy|health|injury|sick|cough|medicine/.test(text)) return "health";
+  if (/friends|social|chat|meet|party|family|conversation|hang out|hangout|invite/.test(text)) return "social";
+  if (/cash|money|currency|exchange|bank|change|price|cost|atm|credit|debit|pay|payment|bill/.test(text)) return "money";
+  if (/time|clock|late|early|hour|minute|schedule|today|tomorrow|tonight|now|date/.test(text)) return "time";
+  if (/weather|rain|hot|cold|snow|sunny|storm|wind|forecast|temperature|humid/.test(text)) return "weather";
+  if (/buy|shop|price|cost|cheap|expensive|market|store|souvenir|discount/.test(text)) return "shopping";
+  if (/where|direction|left|right|straight|map|address|near|far|road|turn|route|way/.test(text)) return "directions";
+
+  return directCategory && directCategory !== "all" ? (directCategory as FeaturePhraseCategory) : "greetings";
+};
+
+const createPhraseId = (destination: string, phrase: Phrase, index: number): string => {
+  const base = [destination, phrase.english, phrase.local, phrase.pronunciation || ""]
+    .filter(Boolean)
+    .join("-")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return `${base || "phrase"}-${index}`;
+};
+
+const buildSearchTags = (phrase: Phrase, destination: string, category: Category): string[] =>
+  Array.from(
+    new Set(
+      [
+        destination,
+        category,
+        phrase.category,
+        phrase.english,
+        phrase.local,
+        phrase.pronunciation,
+        phrase.transliteration,
+        ...(phrase.tags || []),
+      ].filter(Boolean) as string[]
+    )
+  );
+
+const resolveSpeechLanguage = (language?: string, localText?: string): string => {
+  const value = `${language || ""} ${localText || ""}`.toLowerCase();
+
+  if (/japanese|ja\b|日本/.test(value)) return "ja-JP";
+  if (/korean|ko\b|한국/.test(value)) return "ko-KR";
+  if (/chinese|mandarin|zh\b|中文|汉/.test(value)) return "zh-CN";
+  if (/arabic|ar\b|العربية/.test(value)) return "ar-SA";
+  if (/thai|th\b|ไทย/.test(value)) return "th-TH";
+  if (/french|fr\b|français|francais/.test(value)) return "fr-FR";
+  if (/german|de\b|deutsch/.test(value)) return "de-DE";
+  if (/italian|it\b|italiano/.test(value)) return "it-IT";
+  if (/portuguese|pt\b|português|portugues/.test(value)) return "pt-BR";
+  if (/spanish|es\b|español/.test(value)) return "es-ES";
+  if (/hindi|hi\b|हिंदी/.test(value)) return "hi-IN";
+
+  return "en-US";
 };
 
 // ─────────────────────────────────────────────────────────────
 // UTILITY FUNCTIONS
 // ─────────────────────────────────────────────────────────────
 
-// Fuzzy match for typo-tolerant search
-const fuzzyMatch = (text: string, query: string): boolean => {
-  const t = text.toLowerCase();
-  const q = query.toLowerCase();
-  
-  // Direct match
-  if (t.includes(q)) return true;
-  
-  // Fuzzy: allow 1 typo for short queries, 2 for longer
-  const maxDist = q.length <= 4 ? 1 : 2;
-  let distance = 0;
-  let ti = 0, qi = 0;
-  
-  while (ti < t.length && qi < q.length && distance <= maxDist) {
-    if (t[ti] === q[qi]) {
-      qi++;
-    } else {
-      distance++;
-    }
-    ti++;
-  }
-  
-  return distance <= maxDist && qi >= q.length - 1;
-};
-
-// Detect category from phrase text
 const detectCategory = (phrase: Phrase): Category => {
-  const englishText = phrase?.english || "";
-  const categoryText = phrase?.category || "";
-  const text = (englishText + " " + categoryText).toLowerCase();
-  
-  if (/hello|hi|good morning|good evening|thank|please|sorry|excuse|goodbye/.test(text)) return "greetings";
-  if (/food|eat|drink|water|menu|restaurant|order|bill|vegetarian|spicy/.test(text)) return "food";
-  if (/bus|train|taxi|airport|station|ticket|flight|gate|boarding/.test(text)) return "transport";
-  if (/help|emergency|doctor|hospital|police|fire|ambulance|danger/.test(text)) return "emergency";
-  if (/buy|shop|price|cost|money|cheap|expensive|market|store/.test(text)) return "shopping";
-  if (/where|direction|left|right|straight|map|address|near|far/.test(text)) return "directions";
-  
-  return "all";
+  const resolved = resolvePhraseCategory(phrase);
+  return resolved;
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -193,6 +253,9 @@ const CategoryTabs = memo(({ activeCategory, onCategoryPress, counts }: Category
             styles.categoryChip,
             isActive && { backgroundColor: item.color, borderColor: item.color }
           ]}
+          accessibilityRole="button"
+          accessibilityLabel={`${item.label} category${count > 0 ? `, ${count} phrases` : ""}`}
+          accessibilityState={{ selected: isActive }}
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             onCategoryPress(item.key);
@@ -229,6 +292,12 @@ const PhraseCard = memo(({ phrase, onPlay, onBookmark, language }: PhraseCardPro
   const category = detectCategory(phrase);
   const categoryConfig = CATEGORIES.find(c => c.key === category);
   const [isPlaying, setIsPlaying] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      Speech.stop();
+    };
+  }, []);
   
   const handlePlay = async () => {
     if (isPlaying) {
@@ -241,7 +310,7 @@ const PhraseCard = memo(({ phrase, onPlay, onBookmark, language }: PhraseCardPro
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     
     Speech.speak(phrase.local, {
-      language: language?.startsWith("hi") ? "hi-IN" : language?.startsWith("es") ? "es-ES" : "en-US",
+      language: resolveSpeechLanguage(language, phrase.local),
       rate: 0.8,
       onDone: () => setIsPlaying(false),
       onError: () => setIsPlaying(false),
@@ -270,7 +339,13 @@ const PhraseCard = memo(({ phrase, onPlay, onBookmark, language }: PhraseCardPro
             </View>
           )}
         </View>
-        <TouchableOpacity onPress={onBookmark} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <TouchableOpacity
+            onPress={onBookmark}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel={`Bookmark ${phrase.english}`}
+            accessibilityState={{ selected: !!phrase.isBookmarked }}
+          >
           <MaterialCommunityIcons
             name={phrase.isBookmarked ? "star" : "star-outline"}
             size={22}
@@ -285,7 +360,12 @@ const PhraseCard = memo(({ phrase, onPlay, onBookmark, language }: PhraseCardPro
       {/* Local translation */}
       <View style={styles.phraseLocalRow}>
         <Text style={styles.phraseLocal}>{phrase.local}</Text>
-        <PressableScale style={styles.playButton} onPress={handlePlay}>
+        <PressableScale
+          style={styles.playButton}
+          onPress={handlePlay}
+          accessibilityRole="button"
+          accessibilityLabel={`Play pronunciation for ${phrase.english}`}
+        >
           <LinearGradient
             colors={isPlaying ? ["#10B981", "#059669"] : ["#7C3AED", "#6D28D9"]}
             start={{ x: 0, y: 0 }}
@@ -353,31 +433,6 @@ const LanguageHeader = memo(({ language, script, phraseCount, bookmarkCount }: L
 LanguageHeader.displayName = "LanguageHeader";
 
 // ─────────────────────────────────────────────────────────────
-// Voice Input Button
-interface VoiceInputButtonProps {
-  onVoiceInput: () => void;
-  isListening: boolean;
-}
-
-const VoiceInputButton = memo(({ onVoiceInput, isListening }: VoiceInputButtonProps) => (
-  <PressableScale style={styles.voiceButton} onPress={onVoiceInput}>
-    <LinearGradient
-      colors={isListening ? ["#EF4444", "#DC2626"] : ["#7C3AED", "#6D28D9"]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.voiceButtonGradient}
-    >
-      <MaterialCommunityIcons
-        name={isListening ? "microphone" : "microphone-outline"}
-        size={28}
-        color="#FFF"
-      />
-    </LinearGradient>
-  </PressableScale>
-));
-VoiceInputButton.displayName = "VoiceInputButton";
-
-// ─────────────────────────────────────────────────────────────
 // Search Bar
 interface SearchBarProps {
   value: string;
@@ -397,9 +452,15 @@ const SearchBar = memo(({ value, onChangeText, placeholder = "Search phrases..."
       returnKeyType="search"
       autoCapitalize="none"
       autoCorrect={false}
+      accessibilityLabel={placeholder}
     />
     {value.length > 0 && (
-      <TouchableOpacity onPress={() => onChangeText("")} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+      <TouchableOpacity
+        onPress={() => onChangeText("")}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        accessibilityRole="button"
+        accessibilityLabel="Clear search"
+      >
         <MaterialCommunityIcons name="close-circle" size={20} color="#94A3B8" />
       </TouchableOpacity>
     )}
@@ -499,6 +560,9 @@ const DestinationSelector = memo(({ destinations, selected, onSelect }: Destinat
       return (
         <PressableScale
           style={[styles.destinationChip, isSelected && styles.destinationChipActive]}
+          accessibilityRole="button"
+          accessibilityLabel={`Select destination ${item.label}`}
+          accessibilityState={{ selected: isSelected }}
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             onSelect(item.key);
@@ -515,20 +579,20 @@ const DestinationSelector = memo(({ destinations, selected, onSelect }: Destinat
 DestinationSelector.displayName = "DestinationSelector";
 
 // ─────────────────────────────────────────────────────────────
-// AI Context Suggestion
+// Context Suggestions
 interface AIContextSuggestionProps {
   context: string;
   phrases: EnhancedPhrase[];
   onPhrasePress: (phrase: EnhancedPhrase) => void;
 }
 
-const AIContextSuggestion = memo(({ context, phrases, onPhrasePress }: AIContextSuggestionProps) => {
+const ContextSuggestions = memo(({ context, phrases, onPhrasePress }: AIContextSuggestionProps) => {
   if (phrases.length === 0) return null;
   
   return (
     <View style={styles.contextSection}>
       <View style={styles.contextHeader}>
-        <MaterialCommunityIcons name="robot-outline" size={16} color="#7C3AED" />
+        <MaterialCommunityIcons name="compass-outline" size={16} color="#7C3AED" />
         <Text style={styles.contextTitle}>Suggested for {context}</Text>
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -537,6 +601,8 @@ const AIContextSuggestion = memo(({ context, phrases, onPhrasePress }: AIContext
             key={idx}
             style={styles.contextPhraseChip}
             onPress={() => onPhrasePress(phrase)}
+            accessibilityRole="button"
+            accessibilityLabel={`Use suggested phrase ${phrase.english}`}
           >
             <Text style={styles.contextPhraseText} numberOfLines={1}>
               {phrase.english}
@@ -547,7 +613,42 @@ const AIContextSuggestion = memo(({ context, phrases, onPhrasePress }: AIContext
     </View>
   );
 });
-AIContextSuggestion.displayName = "AIContextSuggestion";
+ContextSuggestions.displayName = "ContextSuggestions";
+
+interface PhrasebookScreenErrorBoundaryProps {
+  children: React.ReactNode;
+}
+
+interface PhrasebookScreenErrorBoundaryState {
+  hasError: boolean;
+}
+
+class PhrasebookScreenErrorBoundary extends React.Component<
+  PhrasebookScreenErrorBoundaryProps,
+  PhrasebookScreenErrorBoundaryState
+> {
+  state: PhrasebookScreenErrorBoundaryState = { hasError: false };
+
+  static getDerivedStateFromError(): PhrasebookScreenErrorBoundaryState {
+    return { hasError: true };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View style={styles.errorBoundary}>
+          <EmptyState
+            type="error"
+            actionLabel="Retry"
+            onAction={() => this.setState({ hasError: false })}
+          />
+        </View>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 
 // ─────────────────────────────────────────────────────────────
 // MAIN COMPONENT
@@ -564,11 +665,16 @@ export default function PhrasebookScreen() {
   const [activeCategory, setActiveCategory] = useState<Category>("all");
   const [bookmarks, setBookmarks] = useState<Set<string>>(new Set());
   const [recentPhrases, setRecentPhrases] = useState<string[]>([]);
-  const [isListening, setIsListening] = useState(false);
   const [showBookmarksOnly, setShowBookmarksOnly] = useState(false);
   
   const { activeTrip } = useTravelIntelligence();
   const debouncedSearch = useDebounce(searchQuery, 300);
+  const selectedDestinationLabel = useMemo(() => {
+    const match = destinations.find(
+      (destination) => destination.key === selectedDestination || destination.label === selectedDestination
+    );
+    return match?.label || selectedDestination;
+  }, [destinations, selectedDestination]);
   
   // Initialize
   useEffect(() => {
@@ -694,28 +800,31 @@ export default function PhrasebookScreen() {
     await AsyncStorage.setItem(RECENT_KEY, JSON.stringify(newRecent));
   }, [recentPhrases]);
   
-  const handleVoiceInput = useCallback(() => {
-    setIsListening(!isListening);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    
-    // Note: In production, integrate expo-speech or @react-native-voice/voice
-    if (!isListening) {
-      Alert.alert(
-        "Voice Input",
-        "Voice recognition would be activated here. Speak a phrase to translate.",
-        [{ text: "OK", onPress: () => setIsListening(false) }]
-      );
-    }
-  }, [isListening]);
-  
   // ─────────────────────────────────────────────────────────────
   // COMPUTED VALUES
   // ─────────────────────────────────────────────────────────────
-  
-  const enhancedPhrases = useMemo((): EnhancedPhrase[] => {
+  const indexedPhrases = useMemo<FeaturePhrase[]>(() => {
     if (!phraseData?.phrases) return [];
-    
-    return phraseData.phrases.map(phrase => {
+
+    const destinationTag = phraseData.destination || selectedDestinationLabel || selectedDestination || "phrasebook";
+
+    return phraseData.phrases.map((phrase, index) => {
+      const category = resolvePhraseCategory(phrase);
+      return {
+        id: createPhraseId(destinationTag, phrase, index),
+        english: phrase.english,
+        local: phrase.local,
+        pronunciation: phrase.pronunciation,
+        transliteration: phrase.transliteration,
+        category,
+        difficulty: phrase.difficulty || "beginner",
+        tags: buildSearchTags(phrase, destinationTag, category),
+      };
+    });
+  }, [phraseData?.phrases, phraseData?.destination, selectedDestination, selectedDestinationLabel]);
+
+  const enhancedPhrases = useMemo((): EnhancedPhrase[] => {
+    return indexedPhrases.map((phrase) => {
       const key = `${phrase.english}|${phrase.local}`;
       return {
         ...phrase,
@@ -724,38 +833,57 @@ export default function PhrasebookScreen() {
         category: detectCategory(phrase),
       };
     });
-  }, [phraseData?.phrases, bookmarks, recentPhrases]);
-  
+  }, [indexedPhrases, bookmarks, recentPhrases]);
+
+  const searchResults = useMemo(() => {
+    const query = debouncedSearch.trim();
+    if (!query || indexedPhrases.length === 0) {
+      return null;
+    }
+
+    const engine = new SearchEngine();
+    engine.indexPhrases(indexedPhrases);
+    return engine.search(query, {
+      maxResults: 100,
+      threshold: 0.25,
+      includeFields: ["english", "local", "pronunciation", "tags"],
+    });
+  }, [debouncedSearch, indexedPhrases]);
+
   const filteredPhrases = useMemo(() => {
     let result = enhancedPhrases;
-    
-    // Show bookmarks only
+
     if (showBookmarksOnly) {
-      result = result.filter(p => p.isBookmarked);
+      result = result.filter((phrase) => phrase.isBookmarked);
     }
-    
-    // Category filter
+
     if (activeCategory !== "all") {
-      result = result.filter(p => detectCategory(p) === activeCategory);
+      result = result.filter((phrase) => detectCategory(phrase) === activeCategory);
     }
-    
-    // Search filter (fuzzy)
-    if (debouncedSearch.trim()) {
-      const query = debouncedSearch.toLowerCase();
-      result = result.filter(p =>
-        fuzzyMatch(p.english, query) ||
-        fuzzyMatch(p.local, query) ||
-        (p.pronunciation && fuzzyMatch(p.pronunciation, query))
-      );
+
+    if (searchResults) {
+      if (searchResults.length === 0) {
+        return [];
+      }
+
+      const scoreById = new Map(searchResults.map((entry) => [entry.phrase.id, entry.score]));
+      result = result.filter((phrase) => scoreById.has(phrase.id));
+      result = [...result].sort((a, b) => {
+        const scoreDifference = (scoreById.get(b.id) || 0) - (scoreById.get(a.id) || 0);
+        if (scoreDifference !== 0) return scoreDifference;
+        if (a.isRecent !== b.isRecent) return a.isRecent ? -1 : 1;
+        if (a.isBookmarked !== b.isBookmarked) return a.isBookmarked ? -1 : 1;
+        return 0;
+      });
+      return result;
     }
-    
-    // Sort: recent first, then bookmarks
-    return result.sort((a, b) => {
+
+    return [...result].sort((a, b) => {
       if (a.isRecent !== b.isRecent) return a.isRecent ? -1 : 1;
       if (a.isBookmarked !== b.isBookmarked) return a.isBookmarked ? -1 : 1;
       return 0;
     });
-  }, [enhancedPhrases, showBookmarksOnly, activeCategory, debouncedSearch]);
+  }, [enhancedPhrases, showBookmarksOnly, activeCategory, searchResults]);
   
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = { all: enhancedPhrases.length };
@@ -772,16 +900,11 @@ export default function PhrasebookScreen() {
   );
   
   const contextSuggestions = useMemo(() => {
-    // AI-powered context suggestions based on keywords
     if (!enhancedPhrases.length) return [];
-    
-    return (enhancedPhrases || [])
-      .filter(p => p?.english && typeof p.english === 'string')
-      .filter(p => {
-        const text = p.english.toLowerCase();
-        return CONTEXT_PHRASES.restaurant?.some(kw => text.includes(kw)) ||
-               CONTEXT_PHRASES.emergency?.some(kw => text.includes(kw));
-      })
+
+    const priorityCategories: Category[] = ["emergency", "transport", "food", "accommodation", "health"];
+    return enhancedPhrases
+      .filter((phrase) => priorityCategories.includes(detectCategory(phrase)))
       .slice(0, 4);
   }, [enhancedPhrases]);
   
@@ -795,7 +918,7 @@ export default function PhrasebookScreen() {
   ), [toggleBookmark, addToRecent, phraseData?.language]);
   
   const keyExtractor = useCallback((item: EnhancedPhrase, index: number) => 
-    `${item.english}_${index}`,
+    item.id || `${item.english}_${index}`,
     []
   );
   
@@ -808,20 +931,24 @@ export default function PhrasebookScreen() {
   }
   
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <PhrasebookScreenErrorBoundary>
+      <SafeAreaView style={styles.container} edges={["top"]}>
       {/* Header */}
       <LinearGradient colors={["#7C3AED", "#6D28D9"]} style={styles.header}>
         <View style={styles.headerContent}>
           <View>
-            <Text style={styles.headerTitle}>AI Phrasebook</Text>
+            <Text style={styles.headerTitle}>Phrasebook</Text>
             <Text style={styles.headerSubtitle}>
-              {selectedDestination ? `For ${selectedDestination}` : "Speak like a local"}
+              {selectedDestinationLabel ? `For ${selectedDestinationLabel}` : "Speak like a local"}
             </Text>
           </View>
           <View style={styles.headerActions}>
             <TouchableOpacity
               style={[styles.headerAction, showBookmarksOnly && styles.headerActionActive]}
               onPress={() => setShowBookmarksOnly(!showBookmarksOnly)}
+              accessibilityRole="button"
+              accessibilityLabel={showBookmarksOnly ? "Show all phrases" : "Show bookmarked phrases only"}
+              accessibilityState={{ selected: showBookmarksOnly }}
             >
               <MaterialCommunityIcons
                 name={showBookmarksOnly ? "star" : "star-outline"}
@@ -848,7 +975,7 @@ export default function PhrasebookScreen() {
           <SearchBar
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholder={`Search in ${phraseData.language || "phrases"}...`}
+            placeholder={`Search in ${phraseData.language || selectedDestinationLabel || "phrases"}...`}
           />
         </View>
       )}
@@ -874,8 +1001,8 @@ export default function PhrasebookScreen() {
       
       {/* AI Context Suggestions */}
       {contextSuggestions.length > 0 && !showBookmarksOnly && (
-        <AIContextSuggestion
-          context="your trip"
+        <ContextSuggestions
+          context={selectedDestinationLabel || "your trip"}
           phrases={contextSuggestions}
           onPhrasePress={(phrase) => addToRecent(phrase)}
         />
@@ -903,31 +1030,19 @@ export default function PhrasebookScreen() {
       
       {/* Phrases List */}
       {!loading && filteredPhrases.length > 0 && (
-        <FlatList
+        <FlashList
           data={filteredPhrases}
           renderItem={renderPhrase}
           keyExtractor={keyExtractor}
           contentContainerStyle={styles.phrasesList}
           showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              tintColor="#7C3AED"
-            />
-          }
-          removeClippedSubviews={true}
-          maxToRenderPerBatch={10}
-          windowSize={5}
-          initialNumToRender={8}
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
+          removeClippedSubviews
         />
       )}
-      
-      {/* Floating Voice Button */}
-      {phraseData && (
-        <VoiceInputButton onVoiceInput={handleVoiceInput} isListening={isListening} />
-      )}
-    </SafeAreaView>
+      </SafeAreaView>
+    </PhrasebookScreenErrorBoundary>
   );
 }
 
@@ -937,6 +1052,7 @@ export default function PhrasebookScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F8FAFC" },
+  errorBoundary: { flex: 1, backgroundColor: "#F8FAFC" },
   
   // Header
   header: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.lg },
@@ -1005,10 +1121,6 @@ const styles = StyleSheet.create({
   playButtonGradient: { flex: 1, justifyContent: "center", alignItems: "center" },
   pronunciationRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 8 },
   pronunciation: { fontSize: 13, color: "#64748B", fontStyle: "italic" },
-  
-  // Voice Button
-  voiceButton: { position: "absolute", right: spacing.lg, bottom: spacing.xxl, borderRadius: 32, overflow: "hidden", shadowColor: "#7C3AED", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 6 },
-  voiceButtonGradient: { width: 64, height: 64, justifyContent: "center", alignItems: "center" },
   
   // Skeleton
   skeletonContainer: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm },

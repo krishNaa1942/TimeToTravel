@@ -26,6 +26,7 @@ import {
   RefreshControl,
   Animated,
   Easing,
+  Platform,
 } from "react-native";
 import { Text, TextInput as PaperTextInput } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -46,6 +47,30 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CACHE_KEY = "@packing_cache";
 const CIRCLE_RADIUS = 60;
 const STROKE_WIDTH = 8;
+
+const progressSectionShadow =
+  Platform.select({
+    web: { boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.08)" } as any,
+    default: {
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.08,
+      shadowRadius: 12,
+      elevation: 4,
+    },
+  }) ?? {};
+
+const packingItemCardShadow =
+  Platform.select({
+    web: { boxShadow: "0px 2px 6px rgba(0, 0, 0, 0.06)" } as any,
+    default: {
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.04,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+  }) ?? {};
 
 // ─────────────────────────────────────────────────────────────
 // TYPES & CONSTANTS
@@ -123,15 +148,16 @@ const ProgressRing = memo(({ progress, size = CIRCLE_RADIUS * 2 }: ProgressRingP
   const animatedProgress = useRef(new Animated.Value(0)).current;
   const radius = size / 2 - STROKE_WIDTH;
   const circumference = 2 * Math.PI * radius;
+  const useNativeDriver = Platform.OS !== "web";
   
   useEffect(() => {
     Animated.timing(animatedProgress, {
       toValue: progress,
       duration: 800,
-      useNativeDriver: true,
+      useNativeDriver,
       easing: Easing.out(Easing.cubic),
     }).start();
-  }, [progress, animatedProgress]);
+  }, [progress, animatedProgress, useNativeDriver]);
   
   const strokeDashoffset = animatedProgress.interpolate({
     inputRange: [0, 100],
@@ -920,7 +946,7 @@ const styles = StyleSheet.create({
   destinationChipTextActive: { color: "#FFF", fontWeight: "600" },
   
   // Progress Section
-  progressSection: { flexDirection: "row", alignItems: "center", paddingHorizontal: spacing.lg, paddingVertical: spacing.md, backgroundColor: "#FFF", marginHorizontal: spacing.lg, borderRadius: 20, marginBottom: spacing.md, shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 4 },
+  progressSection: { flexDirection: "row", alignItems: "center", paddingHorizontal: spacing.lg, paddingVertical: spacing.md, backgroundColor: "#FFF", marginHorizontal: spacing.lg, borderRadius: 20, marginBottom: spacing.md, ...progressSectionShadow },
   progressRingContainer: { alignItems: "center", justifyContent: "center" },
   progressRingContent: { position: "absolute", alignItems: "center" },
   progressRingValue: { fontSize: 20, fontWeight: "800", color: "#0F172A" },
@@ -965,7 +991,7 @@ const styles = StyleSheet.create({
   itemsList: { paddingHorizontal: spacing.lg },
   
   // Packing Item Card
-  packingItemCard: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#FFF", borderRadius: 14, padding: spacing.sm, marginBottom: 8, borderWidth: 1, borderColor: "#E2E8F0", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 2 },
+  packingItemCard: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#FFF", borderRadius: 14, padding: spacing.sm, marginBottom: 8, borderWidth: 1, borderColor: "#E2E8F0", ...packingItemCardShadow },
   packingItemCardChecked: { backgroundColor: "#F8FAFC", borderColor: "#E2E8F0" },
   packingItemLeft: { flexDirection: "row", alignItems: "center", flex: 1 },
   priorityIndicator: { width: 3, height: 32, borderRadius: 2, marginRight: 10 },

@@ -619,9 +619,10 @@ export default function ItineraryScreen() {
 
       {/* Floating Header */}
       <View
+        pointerEvents="box-none"
         style={[
           styles.headerOverlay,
-          { paddingTop: insets.top, pointerEvents: "box-none" } as any,
+          { paddingTop: insets.top },
         ]}
       >
         <PressableScale
