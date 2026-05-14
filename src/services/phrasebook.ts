@@ -29,7 +29,9 @@ export interface DestinationInfo {
 
 export const phrasebookService = {
   async getPhrases(destination: string): Promise<PhraseData> {
-    return apiService.get(`/language/phrases?destination=${encodeURIComponent(destination)}`);
+    return apiService.get(
+      `/language/phrases?destination=${encodeURIComponent(destination)}`,
+    );
   },
 
   async getDestinations(): Promise<{ destinations: DestinationInfo[] }> {

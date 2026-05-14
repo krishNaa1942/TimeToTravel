@@ -620,10 +620,7 @@ export default function ItineraryScreen() {
       {/* Floating Header */}
       <View
         pointerEvents="box-none"
-        style={[
-          styles.headerOverlay,
-          { paddingTop: insets.top },
-        ]}
+        style={[styles.headerOverlay, { paddingTop: insets.top }]}
       >
         <PressableScale
           style={styles.backBtn}

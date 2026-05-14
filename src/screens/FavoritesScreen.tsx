@@ -58,25 +58,29 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const CARD_WIDTH = SCREEN_WIDTH - spacing.lg * 2;
 const shouldUseNativeDriver = Platform.OS !== "web";
 
-const statsCardShadow =
-  (Platform.OS === "web"
+const statsCardShadow = (
+  Platform.OS === "web"
     ? { boxShadow: "0px 8px 16px rgba(103, 126, 234, 0.25)" }
-    : { elevation: 8 }) as any;
+    : { elevation: 8 }
+) as any;
 
-const favCardShadow =
-  (Platform.OS === "web"
+const favCardShadow = (
+  Platform.OS === "web"
     ? { boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.06)" }
-    : { elevation: 3 }) as any;
+    : { elevation: 3 }
+) as any;
 
-const removeBtnShadow =
-  (Platform.OS === "web"
+const removeBtnShadow = (
+  Platform.OS === "web"
     ? { boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)" }
-    : { elevation: 2 }) as any;
+    : { elevation: 2 }
+) as any;
 
-const fabShadow =
-  (Platform.OS === "web"
+const fabShadow = (
+  Platform.OS === "web"
     ? { boxShadow: "0px 8px 16px rgba(102, 126, 234, 0.35)" }
-    : { elevation: 10 }) as any;
+    : { elevation: 10 }
+) as any;
 
 type NavProp = NativeStackNavigationProp<RootStackParamList>;
 
