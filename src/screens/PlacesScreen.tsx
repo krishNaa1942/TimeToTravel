@@ -28,18 +28,61 @@ import { PressableScale } from "@/components/UI/PressableScale";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
+const searchBtnShadow = (
+  Platform.OS === "web"
+    ? { boxShadow: "0px 4px 8px rgba(59, 130, 246, 0.3)" }
+    : { elevation: 4 }
+) as any;
+
+const placeCardShadow = (
+  Platform.OS === "web"
+    ? { boxShadow: "0px 2px 8px rgba(0, 0, 0, 0.05)" }
+    : { elevation: 2 }
+) as any;
+
+const placeCardSelectedShadow = (
+  Platform.OS === "web"
+    ? { boxShadow: "0px 2px 8px rgba(59, 130, 246, 0.2)" }
+    : { elevation: 3 }
+) as any;
+
 // ─────────────────────────────────────────────────────────────
 // SITUATIONS CONFIG
 // ─────────────────────────────────────────────────────────────
 
 const SITUATIONS = [
-  { key: "exploring", label: "Sightseeing", icon: "compass-outline", color: "#3B82F6" },
-  { key: "hungry", label: "Food", icon: "restaurant-outline", color: "#F59E0B" },
+  {
+    key: "exploring",
+    label: "Sightseeing",
+    icon: "compass-outline",
+    color: "#3B82F6",
+  },
+  {
+    key: "hungry",
+    label: "Food",
+    icon: "restaurant-outline",
+    color: "#F59E0B",
+  },
   { key: "relaxing", label: "Relax", icon: "leaf-outline", color: "#10B981" },
-  { key: "shopping", label: "Shopping", icon: "bag-handle-outline", color: "#EC4899" },
-  { key: "nightlife", label: "Nightlife", icon: "moon-outline", color: "#8B5CF6" },
+  {
+    key: "shopping",
+    label: "Shopping",
+    icon: "bag-handle-outline",
+    color: "#EC4899",
+  },
+  {
+    key: "nightlife",
+    label: "Nightlife",
+    icon: "moon-outline",
+    color: "#8B5CF6",
+  },
   { key: "family", label: "Family", icon: "people-outline", color: "#06B6D4" },
-  { key: "emergency", label: "Emergency", icon: "medkit-outline", color: "#EF4444" },
+  {
+    key: "emergency",
+    label: "Emergency",
+    icon: "medkit-outline",
+    color: "#EF4444",
+  },
 ];
 
 // ─────────────────────────────────────────────────────────────
@@ -48,9 +91,12 @@ const SITUATIONS = [
 
 const getTimeGreeting = () => {
   const hour = new Date().getHours();
-  if (hour >= 5 && hour < 12) return { text: "Good Morning", icon: "partly-sunny-outline" };
-  if (hour >= 12 && hour < 17) return { text: "Good Afternoon", icon: "sunny-outline" };
-  if (hour >= 17 && hour < 21) return { text: "Good Evening", icon: "moon-outline" };
+  if (hour >= 5 && hour < 12)
+    return { text: "Good Morning", icon: "partly-sunny-outline" };
+  if (hour >= 12 && hour < 17)
+    return { text: "Good Afternoon", icon: "sunny-outline" };
+  if (hour >= 17 && hour < 21)
+    return { text: "Good Evening", icon: "moon-outline" };
   return { text: "Good Night", icon: "moon" };
 };
 
@@ -64,107 +110,147 @@ interface PlaceCardProps {
   isSelected: boolean;
 }
 
-const PlaceCard = React.memo(({ place, onPress, isSelected }: PlaceCardProps) => {
-  const priceDisplay = place.price_level 
-    ? (typeof place.price_level === 'string' ? place.price_level : '💰'.repeat(place.price_level))
-    : '';
+const PlaceCard = React.memo(
+  ({ place, onPress, isSelected }: PlaceCardProps) => {
+    const priceDisplay = place.price_level
+      ? typeof place.price_level === "string"
+        ? place.price_level
+        : "💰".repeat(place.price_level)
+      : "";
 
-  return (
-    <PressableScale onPress={onPress} style={[styles.placeCard, isSelected && styles.placeCardSelected]}>
-      {/* AI Score Badge */}
-      <View style={styles.aiScoreBadge}>
-        <Ionicons name="sparkles" size={12} color="#FFF" />
-        <Text style={styles.aiScoreText}>{place.aiScore}</Text>
-      </View>
-
-      {/* Content */}
-      <View style={styles.placeHeader}>
-        <Text style={styles.placeName} numberOfLines={1}>{place.name}</Text>
-        {place.rating ? (
-          <View style={styles.ratingBadge}>
-            <Ionicons name="star" size={12} color="#F59E0B" />
-            <Text style={styles.ratingText}>{place.rating.toFixed(1)}</Text>
-          </View>
-        ) : null}
-      </View>
-
-      {/* Category & Status Row */}
-      <View style={styles.categoryRow}>
-        <Text style={styles.categoryText} numberOfLines={1}>{place.category}</Text>
-        {place.is_open !== undefined && (
-          <View style={[styles.statusBadge, place.is_open ? styles.openBadge : styles.closedBadge]}>
-            <View style={[styles.statusDot, { backgroundColor: place.is_open ? '#10B981' : '#EF4444' }]} />
-            <Text style={[styles.statusText, { color: place.is_open ? '#10B981' : '#EF4444' }]}>
-              {place.is_open ? 'Open' : 'Closed'}
-            </Text>
-          </View>
-        )}
-      </View>
-
-      {/* AI Reason */}
-      <Text style={styles.aiReason} numberOfLines={2}>{place.aiReason}</Text>
-
-      {/* Meta Info */}
-      <View style={styles.placeMeta}>
-        <View style={styles.metaItem}>
-          <Ionicons name="location-outline" size={14} color={colors.gray} />
-          <Text style={styles.metaText}>{place.distanceKm} km</Text>
+    return (
+      <PressableScale
+        onPress={onPress}
+        style={[styles.placeCard, isSelected && styles.placeCardSelected]}
+      >
+        {/* AI Score Badge */}
+        <View style={styles.aiScoreBadge}>
+          <Ionicons name="sparkles" size={12} color="#FFF" />
+          <Text style={styles.aiScoreText}>{place.aiScore}</Text>
         </View>
-        {place.etaMinutes && (
-          <View style={styles.metaItem}>
-            <Ionicons name="time-outline" size={14} color={colors.gray} />
-            <Text style={styles.metaText}>{place.etaMinutes} min</Text>
-          </View>
-        )}
-        {priceDisplay && (
-          <Text style={styles.priceText}>{priceDisplay}</Text>
-        )}
-      </View>
 
-      {/* Quick Actions */}
-      <View style={styles.quickActions}>
-        <TouchableOpacity style={styles.actionBtn} onPress={() => {
-          const url = Platform.OS === 'ios' 
-            ? `maps://app?daddr=${place.lat},${place.lon}` 
-            : `google.navigation:q=${place.lat},${place.lon}`;
-          Linking.openURL(url).catch(() => {});
-        }}>
-          <Ionicons name="navigate" size={16} color={colors.primary} />
-          <Text style={styles.actionBtnText}>Directions</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionBtn}>
-          <Ionicons name="bookmark-outline" size={16} color={colors.gray} />
-        </TouchableOpacity>
-      </View>
-    </PressableScale>
-  );
-});
+        {/* Content */}
+        <View style={styles.placeHeader}>
+          <Text style={styles.placeName} numberOfLines={1}>
+            {place.name}
+          </Text>
+          {place.rating ? (
+            <View style={styles.ratingBadge}>
+              <Ionicons name="star" size={12} color="#F59E0B" />
+              <Text style={styles.ratingText}>{place.rating.toFixed(1)}</Text>
+            </View>
+          ) : null}
+        </View>
+
+        {/* Category & Status Row */}
+        <View style={styles.categoryRow}>
+          <Text style={styles.categoryText} numberOfLines={1}>
+            {place.category}
+          </Text>
+          {place.is_open !== undefined && (
+            <View
+              style={[
+                styles.statusBadge,
+                place.is_open ? styles.openBadge : styles.closedBadge,
+              ]}
+            >
+              <View
+                style={[
+                  styles.statusDot,
+                  { backgroundColor: place.is_open ? "#10B981" : "#EF4444" },
+                ]}
+              />
+              <Text
+                style={[
+                  styles.statusText,
+                  { color: place.is_open ? "#10B981" : "#EF4444" },
+                ]}
+              >
+                {place.is_open ? "Open" : "Closed"}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* AI Reason */}
+        <Text style={styles.aiReason} numberOfLines={2}>
+          {place.aiReason}
+        </Text>
+
+        {/* Meta Info */}
+        <View style={styles.placeMeta}>
+          <View style={styles.metaItem}>
+            <Ionicons name="location-outline" size={14} color={colors.gray} />
+            <Text style={styles.metaText}>{place.distanceKm} km</Text>
+          </View>
+          {place.etaMinutes && (
+            <View style={styles.metaItem}>
+              <Ionicons name="time-outline" size={14} color={colors.gray} />
+              <Text style={styles.metaText}>{place.etaMinutes} min</Text>
+            </View>
+          )}
+          {priceDisplay && <Text style={styles.priceText}>{priceDisplay}</Text>}
+        </View>
+
+        {/* Quick Actions */}
+        <View style={styles.quickActions}>
+          <TouchableOpacity
+            style={styles.actionBtn}
+            onPress={() => {
+              const url =
+                Platform.OS === "ios"
+                  ? `maps://app?daddr=${place.lat},${place.lon}`
+                  : `google.navigation:q=${place.lat},${place.lon}`;
+              Linking.openURL(url).catch(() => {});
+            }}
+          >
+            <Ionicons name="navigate" size={16} color={colors.primary} />
+            <Text style={styles.actionBtnText}>Directions</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionBtn}>
+            <Ionicons name="bookmark-outline" size={16} color={colors.gray} />
+          </TouchableOpacity>
+        </View>
+      </PressableScale>
+    );
+  },
+);
 
 // ─────────────────────────────────────────────────────────────
 // SITUATION CHIP
 // ─────────────────────────────────────────────────────────────
 
 interface SituationChipProps {
-  situation: typeof SITUATIONS[0];
+  situation: (typeof SITUATIONS)[0];
   isSelected: boolean;
   onPress: () => void;
 }
 
-const SituationChip = React.memo(({ situation, isSelected, onPress }: SituationChipProps) => (
-  <PressableScale
-    onPress={onPress}
-    style={[styles.situationChip, isSelected && { backgroundColor: situation.color, borderColor: situation.color }]}
-  >
-    <Ionicons
-      name={situation.icon as any}
-      size={16}
-      color={isSelected ? '#FFF' : situation.color}
-    />
-    <Text style={[styles.situationText, isSelected && styles.situationTextActive]}>
-      {situation.label}
-    </Text>
-  </PressableScale>
-));
+const SituationChip = React.memo(
+  ({ situation, isSelected, onPress }: SituationChipProps) => (
+    <PressableScale
+      onPress={onPress}
+      style={[
+        styles.situationChip,
+        isSelected && {
+          backgroundColor: situation.color,
+          borderColor: situation.color,
+        },
+      ]}
+    >
+      <Ionicons
+        name={situation.icon as any}
+        size={16}
+        color={isSelected ? "#FFF" : situation.color}
+      />
+      <Text
+        style={[styles.situationText, isSelected && styles.situationTextActive]}
+      >
+        {situation.label}
+      </Text>
+    </PressableScale>
+  ),
+);
 
 // ─────────────────────────────────────────────────────────────
 // CITY SELECTOR
@@ -177,58 +263,85 @@ interface CitySelectorProps {
   currentLocation?: string;
 }
 
-const CitySelector = React.memo(({ cities, selectedCity, onSelect, currentLocation }: CitySelectorProps) => (
-  <View style={styles.citySection}>
-    <Text style={styles.sectionLabel}>Location</Text>
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.cityScroll}>
-      {currentLocation && currentLocation !== selectedCity && (
-        <PressableScale
-          onPress={() => onSelect(currentLocation)}
-          style={[styles.cityChip, styles.currentLocationChip]}
-        >
-          <Ionicons name="location" size={14} color="#FFF" />
-          <Text style={styles.currentLocationText}>Current Location</Text>
-        </PressableScale>
-      )}
-      {cities.map((city) => (
-        <PressableScale
-          key={city}
-          onPress={() => onSelect(city)}
-          style={[styles.cityChip, selectedCity === city && styles.cityChipActive]}
-        >
-          <Text style={[styles.cityText, selectedCity === city && styles.cityTextActive]}>{city}</Text>
-        </PressableScale>
-      ))}
-    </ScrollView>
-  </View>
-));
+const CitySelector = React.memo(
+  ({ cities, selectedCity, onSelect, currentLocation }: CitySelectorProps) => (
+    <View style={styles.citySection}>
+      <Text style={styles.sectionLabel}>Location</Text>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.cityScroll}
+      >
+        {currentLocation && currentLocation !== selectedCity && (
+          <PressableScale
+            onPress={() => onSelect(currentLocation)}
+            style={[styles.cityChip, styles.currentLocationChip]}
+          >
+            <Ionicons name="location" size={14} color="#FFF" />
+            <Text style={styles.currentLocationText}>Current Location</Text>
+          </PressableScale>
+        )}
+        {cities.map((city) => (
+          <PressableScale
+            key={city}
+            onPress={() => onSelect(city)}
+            style={[
+              styles.cityChip,
+              selectedCity === city && styles.cityChipActive,
+            ]}
+          >
+            <Text
+              style={[
+                styles.cityText,
+                selectedCity === city && styles.cityTextActive,
+              ]}
+            >
+              {city}
+            </Text>
+          </PressableScale>
+        ))}
+      </ScrollView>
+    </View>
+  ),
+);
 
 // ─────────────────────────────────────────────────────────────
 // EMPTY STATE
 // ─────────────────────────────────────────────────────────────
 
-const EmptyState = React.memo(({ onSearch, hasSearched }: { onSearch: () => void; hasSearched: boolean }) => (
-  <View style={styles.emptyContainer}>
-    <View style={styles.emptyIconContainer}>
-      <Ionicons name={hasSearched ? "search-outline" : "map-outline"} size={48} color={colors.gray} />
+const EmptyState = React.memo(
+  ({
+    onSearch,
+    hasSearched,
+  }: {
+    onSearch: () => void;
+    hasSearched: boolean;
+  }) => (
+    <View style={styles.emptyContainer}>
+      <View style={styles.emptyIconContainer}>
+        <Ionicons
+          name={hasSearched ? "search-outline" : "map-outline"}
+          size={48}
+          color={colors.gray}
+        />
+      </View>
+      <Text style={styles.emptyTitle}>
+        {hasSearched ? "No places found" : "Discover Amazing Places"}
+      </Text>
+      <Text style={styles.emptySubtitle}>
+        {hasSearched
+          ? "Try adjusting your filters or search in a different area"
+          : "Select your mood and tap search to find the best places nearby"}
+      </Text>
+      {!hasSearched && (
+        <TouchableOpacity style={styles.emptySearchBtn} onPress={onSearch}>
+          <Ionicons name="search" size={18} color="#FFF" />
+          <Text style={styles.emptySearchBtnText}>Start Exploring</Text>
+        </TouchableOpacity>
+      )}
     </View>
-    <Text style={styles.emptyTitle}>
-      {hasSearched ? "No places found" : "Discover Amazing Places"}
-    </Text>
-    <Text style={styles.emptySubtitle}>
-      {hasSearched 
-        ? "Try adjusting your filters or search in a different area"
-        : "Select your mood and tap search to find the best places nearby"
-      }
-    </Text>
-    {!hasSearched && (
-      <TouchableOpacity style={styles.emptySearchBtn} onPress={onSearch}>
-        <Ionicons name="search" size={18} color="#FFF" />
-        <Text style={styles.emptySearchBtnText}>Start Exploring</Text>
-      </TouchableOpacity>
-    )}
-  </View>
-));
+  ),
+);
 
 // ─────────────────────────────────────────────────────────────
 // LOADING SKELETON
@@ -255,7 +368,9 @@ const PlacesSkeleton = React.memo(() => (
 const OfflineBanner = React.memo(() => (
   <View style={styles.offlineBanner}>
     <Ionicons name="cloud-offline-outline" size={16} color="#F59E0B" />
-    <Text style={styles.offlineText}>You're offline. Showing cached results.</Text>
+    <Text style={styles.offlineText}>
+      You're offline. Showing cached results.
+    </Text>
   </View>
 ));
 
@@ -264,14 +379,19 @@ const OfflineBanner = React.memo(() => (
 // ─────────────────────────────────────────────────────────────
 
 export default function PlacesScreen() {
-  const { location, loading: locationLoading, refreshLocation, hasPermission } = useLocation();
-  const { 
-    places, 
-    loading, 
+  const {
+    location,
+    loading: locationLoading,
+    refreshLocation,
+    hasPermission,
+  } = useLocation();
+  const {
+    places,
+    loading,
     refreshing,
-    error, 
-    search, 
-    refresh, 
+    error,
+    search,
+    refresh,
     selectedPlace,
     selectPlace,
     serviceAvailable,
@@ -292,7 +412,7 @@ export default function PlacesScreen() {
   const handleSearch = useCallback(async () => {
     const coords = DEFAULT_CITIES[selectedCity];
     if (!coords) return;
-    
+
     setHasSearched(true);
     await search(coords.lat, coords.lon, situation);
   }, [selectedCity, situation, search]);
@@ -303,18 +423,24 @@ export default function PlacesScreen() {
   }, [refresh]);
 
   // Handle place selection
-  const handlePlacePress = useCallback((place: EnhancedPlace) => {
-    selectPlace(selectedPlace?.fsq_id === place.fsq_id ? null : place);
-  }, [selectedPlace, selectPlace]);
+  const handlePlacePress = useCallback(
+    (place: EnhancedPlace) => {
+      selectPlace(selectedPlace?.fsq_id === place.fsq_id ? null : place);
+    },
+    [selectedPlace, selectPlace],
+  );
 
   // Render place item
-  const renderPlace = useCallback(({ item, index }: { item: EnhancedPlace; index: number }) => (
-    <PlaceCard
-      place={item}
-      onPress={() => handlePlacePress(item)}
-      isSelected={selectedPlace?.fsq_id === item.fsq_id}
-    />
-  ), [selectedPlace, handlePlacePress]);
+  const renderPlace = useCallback(
+    ({ item, index }: { item: EnhancedPlace; index: number }) => (
+      <PlaceCard
+        place={item}
+        onPress={() => handlePlacePress(item)}
+        isSelected={selectedPlace?.fsq_id === item.fsq_id}
+      />
+    ),
+    [selectedPlace, handlePlacePress],
+  );
 
   // Key extractor
   const keyExtractor = useCallback((item: EnhancedPlace) => item.fsq_id, []);
@@ -324,7 +450,9 @@ export default function PlacesScreen() {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
         <View style={styles.emptyContainer}>
-          <View style={[styles.emptyIconContainer, { backgroundColor: '#FEF3C7' }]}>
+          <View
+            style={[styles.emptyIconContainer, { backgroundColor: "#FEF3C7" }]}
+          >
             <Ionicons name="server-outline" size={48} color="#F59E0B" />
           </View>
           <Text style={styles.emptyTitle}>Places Service Unavailable</Text>
@@ -349,8 +477,15 @@ export default function PlacesScreen() {
             <Text style={styles.greeting}>{greeting.text}</Text>
             <Text style={styles.title}>Discover Places</Text>
           </View>
-          <TouchableOpacity style={styles.locationBtn} onPress={refreshLocation}>
-            <Ionicons name="location-outline" size={20} color={colors.primary} />
+          <TouchableOpacity
+            style={styles.locationBtn}
+            onPress={refreshLocation}
+          >
+            <Ionicons
+              name="location-outline"
+              size={20}
+              color={colors.primary}
+            />
           </TouchableOpacity>
         </View>
       </View>
@@ -359,16 +494,19 @@ export default function PlacesScreen() {
       <CitySelector
         cities={cities}
         selectedCity={selectedCity}
-        onSelect={(city) => { setSelectedCity(city); setHasSearched(false); }}
+        onSelect={(city) => {
+          setSelectedCity(city);
+          setHasSearched(false);
+        }}
         currentLocation={location?.city}
       />
 
       {/* Situation Selector */}
       <View style={styles.situationSection}>
         <Text style={styles.sectionLabel}>What are you in the mood for?</Text>
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false} 
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
           style={styles.situationScroll}
           contentContainerStyle={styles.situationScrollContent}
         >
@@ -377,7 +515,10 @@ export default function PlacesScreen() {
               key={s.key}
               situation={s}
               isSelected={situation === s.key}
-              onPress={() => { setSituation(s.key); setHasSearched(false); }}
+              onPress={() => {
+                setSituation(s.key);
+                setHasSearched(false);
+              }}
             />
           ))}
         </ScrollView>
@@ -385,8 +526,8 @@ export default function PlacesScreen() {
 
       {/* Search Button */}
       <View style={styles.searchSection}>
-        <PressableScale 
-          style={styles.searchBtn} 
+        <PressableScale
+          style={styles.searchBtn}
           onPress={handleSearch}
           disabled={loading}
         >
@@ -398,7 +539,9 @@ export default function PlacesScreen() {
           ) : (
             <>
               <Ionicons name="search" size={18} color="#FFF" />
-              <Text style={styles.searchBtnText}>Find Places in {selectedCity}</Text>
+              <Text style={styles.searchBtnText}>
+                Find Places in {selectedCity}
+              </Text>
             </>
           )}
         </PressableScale>
@@ -439,8 +582,12 @@ export default function PlacesScreen() {
           ListHeaderComponent={
             places.length > 0 ? (
               <View style={styles.resultsHeader}>
-                <Text style={styles.resultsCount}>{places.length} places found</Text>
-                <Text style={styles.resultsHint}>Sorted by AI recommendations</Text>
+                <Text style={styles.resultsCount}>
+                  {places.length} places found
+                </Text>
+                <Text style={styles.resultsHint}>
+                  Sorted by AI recommendations
+                </Text>
               </View>
             ) : null
           }
@@ -467,19 +614,19 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sm,
   },
   headerContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   greeting: {
     fontSize: 13,
     color: colors.gray,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
     letterSpacing: 0.5,
   },
   title: {
     fontSize: 28,
-    fontWeight: '800',
+    fontWeight: "800",
     color: colors.text,
     marginTop: 2,
   },
@@ -488,8 +635,8 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 22,
     backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
     borderColor: colors.border,
   },
@@ -501,11 +648,11 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.gray,
     marginBottom: spacing.xs,
     marginLeft: spacing.xs,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
     letterSpacing: 0.5,
   },
   cityScroll: {
@@ -527,24 +674,24 @@ const styles = StyleSheet.create({
   },
   cityText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
     color: colors.text,
   },
   cityTextActive: {
-    color: '#FFF',
-    fontWeight: '600',
+    color: "#FFF",
+    fontWeight: "600",
   },
   currentLocationChip: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
   },
   currentLocationText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#FFF',
+    fontWeight: "600",
+    color: "#FFF",
   },
 
   // Situation Section
@@ -559,8 +706,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   situationChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 24,
@@ -571,12 +718,12 @@ const styles = StyleSheet.create({
   },
   situationText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
     color: colors.text,
   },
   situationTextActive: {
-    color: '#FFF',
-    fontWeight: '600',
+    color: "#FFF",
+    fontWeight: "600",
   },
 
   // Search Section
@@ -585,55 +732,51 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   searchBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: colors.primary,
     borderRadius: 16,
     paddingVertical: 16,
     gap: 8,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    ...searchBtnShadow,
   },
   searchBtnText: {
-    color: '#FFF',
-    fontWeight: '700',
+    color: "#FFF",
+    fontWeight: "700",
     fontSize: 16,
   },
 
   // Offline Banner
   offlineBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FEF3C7',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FEF3C7",
     paddingVertical: 10,
     paddingHorizontal: spacing.md,
     marginBottom: spacing.sm,
   },
   offlineText: {
     fontSize: 13,
-    color: '#92400E',
+    color: "#92400E",
     marginLeft: 8,
-    fontWeight: '500',
+    fontWeight: "500",
   },
 
   // Error Banner
   errorBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FEE2E2',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FEE2E2",
     paddingVertical: 10,
     paddingHorizontal: spacing.md,
     marginBottom: spacing.sm,
   },
   errorText: {
     fontSize: 13,
-    color: '#991B1B',
+    color: "#991B1B",
     marginLeft: 8,
   },
 
@@ -648,7 +791,7 @@ const styles = StyleSheet.create({
   },
   resultsCount: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.text,
   },
   resultsHint: {
@@ -665,25 +808,20 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     borderWidth: 1,
     borderColor: colors.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    ...placeCardShadow,
   },
   placeCardSelected: {
     borderColor: colors.primary,
     borderWidth: 2,
-    shadowColor: colors.primary,
-    shadowOpacity: 0.1,
+    ...placeCardSelectedShadow,
   },
   aiScoreBadge: {
-    position: 'absolute',
+    position: "absolute",
     top: 12,
     right: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#8B5CF6',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#8B5CF6",
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
@@ -691,25 +829,25 @@ const styles = StyleSheet.create({
   },
   aiScoreText: {
     fontSize: 12,
-    fontWeight: '700',
-    color: '#FFF',
+    fontWeight: "700",
+    color: "#FFF",
   },
   placeHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingRight: 50,
   },
   placeName: {
     fontSize: 17,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.text,
     flex: 1,
   },
   ratingBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FEF3C7',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FEF3C7",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
@@ -717,12 +855,12 @@ const styles = StyleSheet.create({
   },
   ratingText: {
     fontSize: 13,
-    fontWeight: '700',
-    color: '#92400E',
+    fontWeight: "700",
+    color: "#92400E",
   },
   categoryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginTop: 6,
     gap: 8,
   },
@@ -732,18 +870,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
     gap: 4,
   },
   openBadge: {
-    backgroundColor: '#D1FAE5',
+    backgroundColor: "#D1FAE5",
   },
   closedBadge: {
-    backgroundColor: '#FEE2E2',
+    backgroundColor: "#FEE2E2",
   },
   statusDot: {
     width: 6,
@@ -752,24 +890,24 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   aiReason: {
     fontSize: 13,
-    color: '#6B7280',
+    color: "#6B7280",
     marginTop: 10,
     lineHeight: 18,
-    fontStyle: 'italic',
+    fontStyle: "italic",
   },
   placeMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginTop: 12,
     gap: 16,
   },
   metaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
   },
   metaText: {
@@ -778,12 +916,12 @@ const styles = StyleSheet.create({
   },
   priceText: {
     fontSize: 12,
-    color: '#F59E0B',
+    color: "#F59E0B",
   },
   quickActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "flex-start",
+    alignItems: "center",
     marginTop: 14,
     paddingTop: 14,
     borderTopWidth: 1,
@@ -791,8 +929,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   actionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 10,
@@ -801,15 +939,15 @@ const styles = StyleSheet.create({
   },
   actionBtnText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.primary,
   },
 
   // Empty State
   emptyContainer: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     padding: spacing.xxl,
   },
   emptyIconContainer: {
@@ -817,27 +955,27 @@ const styles = StyleSheet.create({
     height: 88,
     borderRadius: 44,
     backgroundColor: `${colors.primary}15`,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: spacing.md,
   },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.text,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: spacing.xs,
   },
   emptySubtitle: {
     fontSize: 14,
     color: colors.gray,
-    textAlign: 'center',
+    textAlign: "center",
     maxWidth: 280,
     lineHeight: 20,
   },
   emptySearchBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: colors.primary,
     paddingHorizontal: 24,
     paddingVertical: 14,
@@ -847,14 +985,14 @@ const styles = StyleSheet.create({
   },
   emptySearchBtnText: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#FFF',
+    fontWeight: "600",
+    color: "#FFF",
   },
 
   // Retry Button
   retryBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 12,
@@ -865,7 +1003,7 @@ const styles = StyleSheet.create({
   },
   retryBtnText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.primary,
   },
 

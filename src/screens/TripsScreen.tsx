@@ -557,6 +557,7 @@ const FeatureGrid: React.FC = () => {
     >
       <Text style={styles.sectionTitle}>All Features</Text>
       <FlatList
+        key={`feature-grid-${columns}`}
         data={features}
         keyExtractor={keyExtractor}
         numColumns={columns}

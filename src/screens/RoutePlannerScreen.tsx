@@ -962,6 +962,54 @@ export default function RoutePlannerScreen() {
 // STYLES
 // ─────────────────────────────────────────────────────────────
 
+const topControlShadow =
+  Platform.select({
+    web: { boxShadow: "0px 2px 8px rgba(0, 0, 0, 0.1)" } as any,
+    default: {
+      shadowColor: "#000",
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 4,
+    },
+  }) ?? {};
+
+const searchCardShadow =
+  Platform.select({
+    web: { boxShadow: "0px 8px 16px rgba(0, 0, 0, 0.12)" } as any,
+    default: {
+      shadowColor: "#000",
+      shadowOpacity: 0.12,
+      shadowRadius: 16,
+      shadowOffset: { width: 0, height: 8 },
+      elevation: 6,
+    },
+  }) ?? {};
+
+const prefsPanelShadow =
+  Platform.select({
+    web: { boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.08)" } as any,
+    default: {
+      shadowColor: "#000",
+      shadowOpacity: 0.08,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 4,
+    },
+  }) ?? {};
+
+const resultsPanelShadow =
+  Platform.select({
+    web: { boxShadow: "0px -8px 20px rgba(0, 0, 0, 0.15)" } as any,
+    default: {
+      shadowColor: "#000",
+      shadowOpacity: 0.15,
+      shadowRadius: 20,
+      shadowOffset: { width: 0, height: -8 },
+      elevation: 12,
+    },
+  }) ?? {};
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -992,11 +1040,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 4,
+    ...topControlShadow,
   },
 
   headerTitle: {
@@ -1012,11 +1056,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 4,
+    ...topControlShadow,
   },
 
   // Search Card
@@ -1024,11 +1064,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 20,
     padding: spacing.md,
-    shadowColor: "#000",
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 6,
+    ...searchCardShadow,
   },
 
   locationRow: {
@@ -1183,11 +1219,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: spacing.md,
     marginTop: spacing.sm,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
+    ...prefsPanelShadow,
   },
 
   prefsTitle: {
@@ -1238,11 +1270,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     padding: spacing.lg,
     paddingBottom: spacing.xl,
-    shadowColor: "#000",
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: -8 },
-    elevation: 12,
+    ...resultsPanelShadow,
   },
 
   resultsHandle: {

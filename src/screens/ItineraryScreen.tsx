@@ -618,10 +618,7 @@ export default function ItineraryScreen() {
       </MapComponent>
 
       {/* Floating Header */}
-      <View
-        pointerEvents="box-none"
-        style={[styles.headerOverlay, { paddingTop: insets.top }]}
-      >
+      <View style={[styles.headerOverlay, { paddingTop: insets.top }]}>
         <PressableScale
           style={styles.backBtn}
           onPress={() => navigation.goBack()}
@@ -652,31 +649,29 @@ export default function ItineraryScreen() {
       >
         {/* Search Header */}
         <View style={styles.sheetHeader}>
-          <View style={styles.intentBar}>
-            <Text style={styles.aiIcon}>✨</Text>
-            {/* Bug 1.7 fix: debouncedGenerate on onChangeText for real-time suggestions */}
-            <TextInput
-              value={query}
-              onChangeText={(text) => {
-                setQuery(text);
-                if (text.trim().length > 10) debouncedGenerate(text);
-              }}
-              placeholder="Plan your trip..."
-              style={styles.sheetSearchInput}
-              autoCorrect={false}
-              onSubmitEditing={handleGenerate}
-              placeholderTextColor="#94A3B8"
-              accessibilityLabel="Trip planning search input"
-            />
-            <Pressable
-              style={styles.sheetSearchBtn}
-              onPress={handleGenerate}
-              accessibilityLabel="Generate itinerary"
-              accessibilityRole="button"
-            >
-              <Text style={styles.sheetSearchIcon}>→</Text>
-            </Pressable>
-          </View>
+          <Text style={styles.aiIcon}>✨</Text>
+          {/* Bug 1.7 fix: debouncedGenerate on onChangeText for real-time suggestions */}
+          <TextInput
+            value={query}
+            onChangeText={(text) => {
+              setQuery(text);
+              if (text.trim().length > 10) debouncedGenerate(text);
+            }}
+            placeholder="Plan your trip..."
+            style={styles.sheetSearchInput}
+            autoCorrect={false}
+            onSubmitEditing={handleGenerate}
+            placeholderTextColor="#94A3B8"
+            accessibilityLabel="Trip planning search input"
+          />
+          <Pressable
+            style={styles.sheetSearchBtn}
+            onPress={handleGenerate}
+            accessibilityLabel="Generate itinerary"
+            accessibilityRole="button"
+          >
+            <Text style={styles.sheetSearchIcon}>→</Text>
+          </Pressable>
         </View>
 
         {/* Content */}

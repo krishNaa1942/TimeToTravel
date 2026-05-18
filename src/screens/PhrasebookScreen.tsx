@@ -16,7 +16,14 @@
  * - Haptic feedback
  */
 
-import React, { useState, useEffect, useMemo, useCallback, memo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
+  memo,
+} from "react";
 import {
   View,
   StyleSheet,
@@ -38,8 +45,9 @@ import {
   PhraseData,
   DestinationInfo,
 } from "@/services/phrasebook";
-import { spacing } from "@/theme/colors";
+import { colors, spacing } from "@/theme/colors";
 import { useTravelIntelligence } from "@/stores/travelIntelligenceStore";
+import { usePhrasebookStore } from "@/features/phrasebook/store/phrasebookStore";
 import { PressableScale } from "@/components/UI/PressableScale";
 import { GlassCard } from "@/components/UI/GlassCard";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -106,7 +114,7 @@ const Speech = {
   },
 };
 
-const CACHE_KEY = "@phrasebook_cache";
+const CACHE_KEY = "@phrasebook_cache_v2";
 const BOOKMARKS_KEY = "@phrasebook_bookmarks";
 const RECENT_KEY = "@phrasebook_recent";
 const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
@@ -128,6 +136,16 @@ interface CachedPhrasebook {
   data: PhraseData;
   destination: string;
   timestamp: number;
+}
+
+interface CategorySummary {
+  key: Category;
+  label: string;
+  icon: string;
+  color: string;
+  emoji: string;
+  count: number;
+  previews: string[];
 }
 
 const CATEGORIES: {
@@ -414,75 +432,94 @@ const detectCategory = (phrase: Phrase): Category => {
 // ─────────────────────────────────────────────────────────────
 
 // ─────────────────────────────────────────────────────────────
-// Category Tabs
-interface CategoryTabsProps {
+// Category Grid
+interface CategoryGridProps {
   activeCategory: Category;
   onCategoryPress: (cat: Category) => void;
-  counts: Record<string, number>;
+  summaries: CategorySummary[];
 }
 
-const CategoryTabs = memo(
-  ({ activeCategory, onCategoryPress, counts }: CategoryTabsProps) => (
-    <FlatList
-      horizontal
-      data={CATEGORIES}
-      keyExtractor={(item) => item.key}
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.categoryScroll}
-      renderItem={({ item }) => {
+const CategoryGrid = memo(
+  ({ activeCategory, onCategoryPress, summaries }: CategoryGridProps) => (
+    <View style={styles.categoryGrid}>
+      {summaries.map((item) => {
         const isActive = activeCategory === item.key;
-        const count = item.key === "all" ? counts.all : counts[item.key] || 0;
+        const previewLines =
+          item.previews.length > 0 ? item.previews : ["Tap to explore"];
 
         return (
           <PressableScale
+            key={item.key}
             style={[
-              styles.categoryChip,
-              isActive && {
-                backgroundColor: item.color,
-                borderColor: item.color,
-              },
+              styles.categoryCard,
+              isActive && styles.categoryCardActive,
+              { borderColor: isActive ? item.color : "#E2E8F0" },
             ]}
             accessibilityRole="button"
-            accessibilityLabel={`${item.label} category${count > 0 ? `, ${count} phrases` : ""}`}
+            accessibilityLabel={`${item.label} category, ${item.count} phrases`}
             accessibilityState={{ selected: isActive }}
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               onCategoryPress(item.key);
             }}
           >
-            <Text style={styles.categoryEmoji}>{item.emoji}</Text>
+            <View style={styles.categoryCardTop}>
+              <Text style={styles.categoryCardEmoji}>{item.emoji}</Text>
+              <View
+                style={[
+                  styles.categoryCountPill,
+                  { backgroundColor: `${item.color}18` },
+                ]}
+              >
+                <Text
+                  style={[styles.categoryCountPillText, { color: item.color }]}
+                >
+                  {item.count}
+                </Text>
+              </View>
+            </View>
+
             <Text
               style={[
-                styles.categoryLabel,
-                isActive && styles.categoryLabelActive,
+                styles.categoryCardTitle,
+                isActive && styles.categoryCardTitleActive,
               ]}
             >
               {item.label}
             </Text>
-            {count > 0 && (
-              <View
-                style={[
-                  styles.categoryCount,
-                  isActive && styles.categoryCountActive,
-                ]}
-              >
+
+            <Text style={styles.categoryCardSubtext}>
+              {item.count > 0
+                ? `${item.count} phrases available`
+                : "No phrases yet"}
+            </Text>
+
+            <View style={styles.categoryPreviewList}>
+              {previewLines.slice(0, 2).map((line, index) => (
                 <Text
+                  key={`${item.key}-${index}`}
                   style={[
-                    styles.categoryCountText,
-                    isActive && { color: "#FFF" },
+                    styles.categoryPreviewText,
+                    isActive && styles.categoryPreviewTextActive,
                   ]}
+                  numberOfLines={1}
                 >
-                  {count}
+                  {line}
                 </Text>
-              </View>
-            )}
+              ))}
+              {previewLines.length > 2 && (
+                <Text style={styles.categoryPreviewMore}>
+                  +{previewLines.length - 2} more
+                </Text>
+              )}
+            </View>
           </PressableScale>
         );
-      }}
-    />
+      })}
+    </View>
   ),
 );
-CategoryTabs.displayName = "CategoryTabs";
+CategoryGrid.displayName = "CategoryGrid";
 
 // ─────────────────────────────────────────────────────────────
 // Phrase Card
@@ -624,41 +661,65 @@ PhraseCard.displayName = "PhraseCard";
 
 // ─────────────────────────────────────────────────────────────
 // Language Header
-interface LanguageHeaderProps {
-  language: string;
-  script?: string;
-  phraseCount: number;
-  bookmarkCount: number;
-}
-
 const LanguageHeader = memo(
-  ({ language, script, phraseCount, bookmarkCount }: LanguageHeaderProps) => (
+  ({
+    language,
+    script,
+    phraseCount,
+    categoryCount,
+    bookmarkCount,
+    beginnerCount,
+  }: {
+    language: string;
+    script?: string;
+    phraseCount: number;
+    categoryCount: number;
+    bookmarkCount: number;
+    beginnerCount: number;
+  }) => (
     <LinearGradient
       colors={["#1E293B", "#0F172A"]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={styles.languageHeader}
     >
-      <View style={styles.languageHeaderLeft}>
-        <Text style={styles.languageEmoji}>🌍</Text>
-        <View>
-          <Text style={styles.languageName}>{language}</Text>
-          {script && (
-            <Text style={styles.languageScript}>Script: {script}</Text>
-          )}
+      <View style={styles.languageHeaderTop}>
+        <View style={styles.languageHeaderIdentity}>
+          <Text style={styles.languageEmoji}>🌍</Text>
+          <View>
+            <Text style={styles.languageName}>{language}</Text>
+            {script && (
+              <Text style={styles.languageScript}>Script: {script}</Text>
+            )}
+          </View>
+        </View>
+        <View style={styles.languageHeaderBadge}>
+          <Text style={styles.languageHeaderBadgeText}>Scan-friendly</Text>
         </View>
       </View>
-      <View style={styles.languageStats}>
-        <View style={styles.languageStat}>
-          <MaterialCommunityIcons name="translate" size={16} color="#A5B4FC" />
-          <Text style={styles.languageStatText}>{phraseCount} phrases</Text>
+
+      <Text style={styles.languageHeaderHint}>
+        Browse essentials first, then jump into a category card to preview real
+        phrases before you search.
+      </Text>
+
+      <View style={styles.languageStatsGrid}>
+        <View style={styles.languageStatCard}>
+          <Text style={styles.languageStatValue}>{phraseCount}</Text>
+          <Text style={styles.languageStatLabel}>phrases</Text>
         </View>
-        {bookmarkCount > 0 && (
-          <View style={styles.languageStat}>
-            <MaterialCommunityIcons name="star" size={16} color="#FCD34D" />
-            <Text style={styles.languageStatText}>{bookmarkCount} saved</Text>
-          </View>
-        )}
+        <View style={styles.languageStatCard}>
+          <Text style={styles.languageStatValue}>{categoryCount}</Text>
+          <Text style={styles.languageStatLabel}>categories</Text>
+        </View>
+        <View style={styles.languageStatCard}>
+          <Text style={styles.languageStatValue}>{bookmarkCount}</Text>
+          <Text style={styles.languageStatLabel}>saved</Text>
+        </View>
+        <View style={styles.languageStatCard}>
+          <Text style={styles.languageStatValue}>{beginnerCount}</Text>
+          <Text style={styles.languageStatLabel}>beginner</Text>
+        </View>
       </View>
     </LinearGradient>
   ),
@@ -675,7 +736,7 @@ interface SearchBarProps {
 
 const SearchBar = memo(
   ({
-    value,
+    value = "",
     onChangeText,
     placeholder = "Search phrases...",
   }: SearchBarProps) => (
@@ -743,12 +804,13 @@ const EmptyState = memo(({ type, onAction, actionLabel }: EmptyStateProps) => {
     "no-destination": {
       emoji: "🗺️",
       title: "Select a Destination",
-      subtitle: "Choose where you're traveling to see local phrases",
+      subtitle:
+        "Choose where you're traveling to load essentials, categories, and local phrases.",
     },
     "no-results": {
       emoji: "🔍",
       title: "No Phrases Found",
-      subtitle: "Try a different search term or category",
+      subtitle: "Try Essentials, Greetings, Food, or Emergency.",
     },
     error: {
       emoji: "⚠️",
@@ -833,14 +895,14 @@ DestinationSelector.displayName = "DestinationSelector";
 
 // ─────────────────────────────────────────────────────────────
 // Context Suggestions
-interface AIContextSuggestionProps {
+interface HelpfulSuggestionsProps {
   context: string;
   phrases: EnhancedPhrase[];
   onPhrasePress: (phrase: EnhancedPhrase) => void;
 }
 
-const ContextSuggestions = memo(
-  ({ context, phrases, onPhrasePress }: AIContextSuggestionProps) => {
+const HelpfulSuggestions = memo(
+  ({ context, phrases, onPhrasePress }: HelpfulSuggestionsProps) => {
     if (phrases.length === 0) return null;
 
     return (
@@ -851,7 +913,7 @@ const ContextSuggestions = memo(
             size={16}
             color="#7C3AED"
           />
-          <Text style={styles.contextTitle}>Suggested for {context}</Text>
+          <Text style={styles.contextTitle}>Helpful for {context}</Text>
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           {phrases.slice(0, 4).map((phrase, idx) => (
@@ -872,7 +934,7 @@ const ContextSuggestions = memo(
     );
   },
 );
-ContextSuggestions.displayName = "ContextSuggestions";
+HelpfulSuggestions.displayName = "HelpfulSuggestions";
 
 interface PhrasebookScreenErrorBoundaryProps {
   children: React.ReactNode;
@@ -914,19 +976,34 @@ class PhrasebookScreenErrorBoundary extends React.Component<
 // ─────────────────────────────────────────────────────────────
 
 export default function PhrasebookScreen() {
+  const selectedDestination =
+    usePhrasebookStore((state) => state.selectedDestination) || "";
+  const selectDestination = usePhrasebookStore(
+    (state) => state.selectDestination,
+  );
+  const searchQuery = usePhrasebookStore((state) => state.searchQuery) || "";
+  const setSearchQuery = usePhrasebookStore((state) => state.setSearchQuery);
+  const activeCategory = usePhrasebookStore((state) => state.activeCategory);
+  const setActiveCategory = usePhrasebookStore(
+    (state) => state.setActiveCategory,
+  );
+  const showBookmarksOnly = usePhrasebookStore(
+    (state) => state.showBookmarksOnly,
+  );
+  const toggleBookmarksOnly = usePhrasebookStore(
+    (state) => state.toggleBookmarksOnly,
+  );
+
   const [destinations, setDestinations] = useState<DestinationInfo[]>([]);
-  const [selectedDestination, setSelectedDestination] = useState("");
   const [phraseData, setPhraseData] = useState<PhraseData | null>(null);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [initLoading, setInitLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeCategory, setActiveCategory] = useState<Category>("all");
   const [bookmarks, setBookmarks] = useState<Set<string>>(new Set());
   const [recentPhrases, setRecentPhrases] = useState<string[]>([]);
-  const [showBookmarksOnly, setShowBookmarksOnly] = useState(false);
 
   const { activeTrip } = useTravelIntelligence();
+  const loadRequestIdRef = useRef(0);
   const debouncedSearch = useDebounce(searchQuery, 300);
   const selectedDestinationLabel = useMemo(() => {
     const match = destinations.find(
@@ -937,6 +1014,12 @@ export default function PhrasebookScreen() {
     return match?.label || selectedDestination;
   }, [destinations, selectedDestination]);
 
+  useEffect(() => {
+    return () => {
+      loadRequestIdRef.current += 1;
+    };
+  }, []);
+
   // Initialize
   useEffect(() => {
     const init = async () => {
@@ -946,12 +1029,14 @@ export default function PhrasebookScreen() {
         const destList = (response.destinations || []) as DestinationInfo[];
         setDestinations(destList);
 
-        // Use active trip destination if available, otherwise first destination
+        // Use active trip destination if available, otherwise persisted or first destination
         const initialDest =
-          activeTrip?.destination?.label || destList[0]?.key || "";
+          activeTrip?.destination?.label ||
+          selectedDestination ||
+          destList[0]?.key ||
+          "";
         if (initialDest) {
-          setSelectedDestination(initialDest);
-          await loadCachedPhrases(initialDest);
+          await loadPhrases(initialDest);
         }
 
         // Load bookmarks and recent
@@ -964,23 +1049,22 @@ export default function PhrasebookScreen() {
       }
     };
     init();
-  }, [activeTrip?.destination?.label]);
+  }, [activeTrip?.destination?.label, selectedDestination]);
 
-  const loadCachedPhrases = async (destination: string) => {
+  const readCachedPhrases = useCallback(async (destination: string) => {
     try {
       const cached = await AsyncStorage.getItem(`${CACHE_KEY}_${destination}`);
       if (cached) {
         const data: CachedPhrasebook = JSON.parse(cached);
         if (Date.now() - data.timestamp < CACHE_TTL) {
-          setPhraseData(data.data);
-          return true;
+          return data.data;
         }
       }
     } catch (e) {
       // Ignore cache errors
     }
-    return false;
-  };
+    return null;
+  }, []);
 
   const loadBookmarks = async () => {
     try {
@@ -1004,35 +1088,56 @@ export default function PhrasebookScreen() {
     }
   };
 
-  const loadPhrases = useCallback(async (destination: string) => {
-    if (!destination) return;
+  const loadPhrases = useCallback(
+    async (destination: string) => {
+      if (!destination) return;
 
-    setSelectedDestination(destination);
-    setLoading(true);
-    setPhraseData(null);
-
-    try {
-      // Try cache first
-      const hasCache = await loadCachedPhrases(destination);
-      if (hasCache) {
-        setLoading(false);
-        return;
+      const requestId = ++loadRequestIdRef.current;
+      if (destination !== selectedDestination) {
+        selectDestination(destination);
       }
 
-      const response = await phrasebookService.getPhrases(destination);
-      setPhraseData(response);
+      setLoading(true);
 
-      // Cache the data
-      await AsyncStorage.setItem(
-        `${CACHE_KEY}_${destination}`,
-        JSON.stringify({ data: response, destination, timestamp: Date.now() }),
-      );
-    } catch (e: any) {
-      Alert.alert("Error", e.message || "Failed to load phrases");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      try {
+        // Try cache first
+        const cached = await readCachedPhrases(destination);
+        if (requestId !== loadRequestIdRef.current) {
+          return;
+        }
+
+        if (cached) {
+          setPhraseData(cached);
+          return;
+        }
+
+        const response = await phrasebookService.getPhrases(destination);
+        if (requestId !== loadRequestIdRef.current) {
+          return;
+        }
+        setPhraseData(response);
+
+        // Cache the data
+        await AsyncStorage.setItem(
+          `${CACHE_KEY}_${destination}`,
+          JSON.stringify({
+            data: response,
+            destination,
+            timestamp: Date.now(),
+          }),
+        );
+      } catch (e: any) {
+        if (requestId === loadRequestIdRef.current) {
+          Alert.alert("Error", e.message || "Failed to load phrases");
+        }
+      } finally {
+        if (requestId === loadRequestIdRef.current) {
+          setLoading(false);
+        }
+      }
+    },
+    [readCachedPhrases, selectDestination, selectedDestination],
+  );
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -1113,25 +1218,112 @@ export default function PhrasebookScreen() {
         ...phrase,
         isBookmarked: bookmarks.has(key),
         isRecent: recentPhrases.includes(phrase.english),
-        category: detectCategory(phrase),
+        category: phrase.category || "greetings",
       };
     });
   }, [indexedPhrases, bookmarks, recentPhrases]);
 
+  const searchEngine = useMemo(() => {
+    const engine = new SearchEngine();
+    if (indexedPhrases.length > 0) {
+      engine.indexPhrases(indexedPhrases);
+    }
+    return engine;
+  }, [indexedPhrases]);
+
   const searchResults = useMemo(() => {
-    const query = debouncedSearch.trim();
+    const query =
+      typeof debouncedSearch === "string" ? debouncedSearch.trim() : "";
     if (!query || indexedPhrases.length === 0) {
       return null;
     }
 
-    const engine = new SearchEngine();
-    engine.indexPhrases(indexedPhrases);
-    return engine.search(query, {
+    return searchEngine.search(query, {
       maxResults: 100,
       threshold: 0.25,
       includeFields: ["english", "local", "pronunciation", "tags"],
     });
-  }, [debouncedSearch, indexedPhrases]);
+  }, [debouncedSearch, indexedPhrases, searchEngine]);
+
+  const categorySummaries = useMemo<CategorySummary[]>(() => {
+    return CATEGORIES.map((category) => {
+      const phrasesForCategory =
+        category.key === "all"
+          ? enhancedPhrases
+          : enhancedPhrases.filter(
+              (phrase) => phrase.category === category.key,
+            );
+
+      const sortedPreviews = [...phrasesForCategory].sort((a, b) => {
+        if (a.isRecent !== b.isRecent) return a.isRecent ? -1 : 1;
+        if (a.isBookmarked !== b.isBookmarked) return a.isBookmarked ? -1 : 1;
+        if (a.difficulty !== b.difficulty) {
+          const difficultyOrder = {
+            beginner: 0,
+            intermediate: 1,
+            advanced: 2,
+          };
+          return (
+            difficultyOrder[a.difficulty || "beginner"] -
+            difficultyOrder[b.difficulty || "beginner"]
+          );
+        }
+        return 0;
+      });
+
+      return {
+        ...category,
+        count: phrasesForCategory.length,
+        previews: sortedPreviews.slice(0, 3).map((phrase) => phrase.english),
+      };
+    });
+  }, [enhancedPhrases]);
+
+  const beginnerCount = useMemo(
+    () =>
+      enhancedPhrases.filter((phrase) => phrase.difficulty === "beginner")
+        .length,
+    [enhancedPhrases],
+  );
+
+  const essentialPhrases = useMemo(() => {
+    if (!enhancedPhrases.length) return [];
+
+    const priorityCategories: Category[] = [
+      "greetings",
+      "emergency",
+      "food",
+      "transport",
+      "accommodation",
+      "health",
+    ];
+
+    return enhancedPhrases
+      .filter(
+        (phrase) =>
+          phrase.difficulty === "beginner" ||
+          priorityCategories.includes(
+            normalizeCategory(phrase.category) || "greetings",
+          ),
+      )
+      .sort((a, b) => {
+        const aPriority = priorityCategories.includes(
+          normalizeCategory(a.category) || "greetings",
+        )
+          ? 0
+          : 1;
+        const bPriority = priorityCategories.includes(
+          normalizeCategory(b.category) || "greetings",
+        )
+          ? 0
+          : 1;
+        if (aPriority !== bPriority) return aPriority - bPriority;
+        if (a.isRecent !== b.isRecent) return a.isRecent ? -1 : 1;
+        if (a.isBookmarked !== b.isBookmarked) return a.isBookmarked ? -1 : 1;
+        return 0;
+      })
+      .slice(0, 6);
+  }, [enhancedPhrases]);
 
   const filteredPhrases = useMemo(() => {
     let result = enhancedPhrases;
@@ -1141,9 +1333,7 @@ export default function PhrasebookScreen() {
     }
 
     if (activeCategory !== "all") {
-      result = result.filter(
-        (phrase) => detectCategory(phrase) === activeCategory,
-      );
+      result = result.filter((phrase) => phrase.category === activeCategory);
     }
 
     if (searchResults) {
@@ -1173,15 +1363,6 @@ export default function PhrasebookScreen() {
     });
   }, [enhancedPhrases, showBookmarksOnly, activeCategory, searchResults]);
 
-  const categoryCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: enhancedPhrases.length };
-    enhancedPhrases.forEach((phrase) => {
-      const cat = detectCategory(phrase);
-      counts[cat] = (counts[cat] || 0) + 1;
-    });
-    return counts;
-  }, [enhancedPhrases]);
-
   const bookmarkCount = useMemo(
     () => enhancedPhrases.filter((p) => p.isBookmarked).length,
     [enhancedPhrases],
@@ -1198,7 +1379,11 @@ export default function PhrasebookScreen() {
       "health",
     ];
     return enhancedPhrases
-      .filter((phrase) => priorityCategories.includes(detectCategory(phrase)))
+      .filter((phrase) =>
+        priorityCategories.includes(
+          normalizeCategory(phrase.category) || "greetings",
+        ),
+      )
       .slice(0, 4);
   }, [enhancedPhrases]);
 
@@ -1248,7 +1433,7 @@ export default function PhrasebookScreen() {
                   styles.headerAction,
                   showBookmarksOnly && styles.headerActionActive,
                 ]}
-                onPress={() => setShowBookmarksOnly(!showBookmarksOnly)}
+                onPress={toggleBookmarksOnly}
                 accessibilityRole="button"
                 accessibilityLabel={
                   showBookmarksOnly
@@ -1267,12 +1452,15 @@ export default function PhrasebookScreen() {
           </View>
         </LinearGradient>
 
-        {/* Destination Selector */}
-        {destinations.length > 0 && (
-          <DestinationSelector
-            destinations={destinations}
-            selected={selectedDestination}
-            onSelect={loadPhrases}
+        {/* Destination Overview */}
+        {phraseData && (
+          <LanguageHeader
+            language={phraseData.language || "Unknown"}
+            script={phraseData.script}
+            phraseCount={phraseData.phrases?.length || 0}
+            categoryCount={CATEGORIES.length - 1}
+            bookmarkCount={bookmarkCount}
+            beginnerCount={beginnerCount}
           />
         )}
 
@@ -1282,36 +1470,110 @@ export default function PhrasebookScreen() {
             <SearchBar
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholder={`Search in ${phraseData.language || selectedDestinationLabel || "phrases"}...`}
+              placeholder={`Search phrases or tap a card in ${phraseData.language || selectedDestinationLabel || "this language"}...`}
             />
           </View>
         )}
 
-        {/* Category Tabs */}
+        {/* Essentials */}
+        {phraseData && essentialPhrases.length > 0 && (
+          <View style={styles.sectionBlock}>
+            <View style={styles.sectionHeader}>
+              <View>
+                <Text style={styles.sectionTitle}>Essential phrases</Text>
+                <Text style={styles.sectionSubtitle}>
+                  Fast access to the phrases travelers reach for first.
+                </Text>
+              </View>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.railScroll}
+            >
+              {essentialPhrases.map((phrase) => {
+                const categoryConfig = CATEGORIES.find(
+                  (category) => category.key === phrase.category,
+                );
+
+                return (
+                  <PressableScale
+                    key={phrase.id}
+                    style={styles.railCard}
+                    onPress={() => {
+                      setSearchQuery(phrase.english);
+                      addToRecent(phrase);
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Search for essential phrase ${phrase.english}`}
+                  >
+                    <View
+                      style={[
+                        styles.railBadge,
+                        {
+                          backgroundColor: `${categoryConfig?.color || "#7C3AED"}18`,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.railBadgeText,
+                          { color: categoryConfig?.color || "#7C3AED" },
+                        ]}
+                      >
+                        {categoryConfig?.label || "Travel"}
+                      </Text>
+                    </View>
+                    <Text style={styles.railEnglish} numberOfLines={1}>
+                      {phrase.english}
+                    </Text>
+                    <Text style={styles.railLocal} numberOfLines={1}>
+                      {phrase.local}
+                    </Text>
+                  </PressableScale>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* Category Grid */}
         {phraseData && (
-          <CategoryTabs
-            activeCategory={activeCategory}
-            onCategoryPress={setActiveCategory}
-            counts={categoryCounts}
+          <View style={styles.sectionBlock}>
+            <View style={styles.sectionHeader}>
+              <View>
+                <Text style={styles.sectionTitle}>Browse categories</Text>
+                <Text style={styles.sectionSubtitle}>
+                  Tap a card to preview phrases before you scroll the full list.
+                </Text>
+              </View>
+            </View>
+            <CategoryGrid
+              activeCategory={activeCategory}
+              onCategoryPress={setActiveCategory}
+              summaries={categorySummaries}
+            />
+          </View>
+        )}
+
+        {/* Destination Selector */}
+        {destinations.length > 0 && (
+          <DestinationSelector
+            destinations={destinations}
+            selected={selectedDestination}
+            onSelect={loadPhrases}
           />
         )}
 
-        {/* Language Header */}
-        {phraseData && !loading && (
-          <LanguageHeader
-            language={phraseData.language || "Unknown"}
-            script={phraseData.script}
-            phraseCount={phraseData.phrases?.length || 0}
-            bookmarkCount={bookmarkCount}
-          />
-        )}
-
-        {/* AI Context Suggestions */}
+        {/* Helpful Suggestions */}
         {contextSuggestions.length > 0 && !showBookmarksOnly && (
-          <ContextSuggestions
+          <HelpfulSuggestions
             context={selectedDestinationLabel || "your trip"}
             phrases={contextSuggestions}
-            onPhrasePress={(phrase) => addToRecent(phrase)}
+            onPhrasePress={(phrase) => {
+              setSearchQuery(phrase.english);
+              addToRecent(phrase);
+            }}
           />
         )}
 
@@ -1336,9 +1598,7 @@ export default function PhrasebookScreen() {
         {!loading && phraseData && filteredPhrases.length === 0 && (
           <EmptyState
             type="no-results"
-            onAction={
-              showBookmarksOnly ? () => setShowBookmarksOnly(false) : undefined
-            }
+            onAction={showBookmarksOnly ? toggleBookmarksOnly : undefined}
             actionLabel={showBookmarksOnly ? "Show All Phrases" : undefined}
           />
         )}
@@ -1435,46 +1695,26 @@ const styles = StyleSheet.create({
   },
   searchInput: { flex: 1, fontSize: 14, color: "#0F172A", padding: 0 },
 
-  // Categories
-  categoryScroll: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.sm,
-    gap: 8,
-  },
-  categoryChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: "#FFF",
-    borderRadius: 16,
-    gap: 6,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  categoryEmoji: { fontSize: 14 },
-  categoryLabel: { fontSize: 12, fontWeight: "600", color: "#64748B" },
-  categoryLabelActive: { color: "#FFF" },
-  categoryCount: {
-    backgroundColor: "#F1F5F9",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-  },
-  categoryCountActive: { backgroundColor: "rgba(255,255,255,0.2)" },
-  categoryCountText: { fontSize: 10, fontWeight: "700", color: "#64748B" },
-
-  // Language Header
+  // Overview and Browse Sections
   languageHeader: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+    borderRadius: 18,
+    padding: spacing.md,
+    gap: 12,
+  },
+  languageHeaderTop: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.sm,
-    borderRadius: 14,
-    padding: spacing.md,
+    gap: 12,
   },
-  languageHeaderLeft: { flexDirection: "row", alignItems: "center", gap: 12 },
+  languageHeaderIdentity: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    flexShrink: 1,
+  },
   languageEmoji: { fontSize: 28 },
   languageName: { fontSize: 18, fontWeight: "700", color: "#FFF" },
   languageScript: {
@@ -1482,9 +1722,169 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.6)",
     marginTop: 2,
   },
-  languageStats: { flexDirection: "row", gap: 12 },
-  languageStat: { flexDirection: "row", alignItems: "center", gap: 4 },
-  languageStatText: { fontSize: 11, color: "#CBD5E1", fontWeight: "500" },
+  languageHeaderBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.12)",
+  },
+  languageHeaderBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#E0E7FF",
+  },
+  languageHeaderHint: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: "rgba(255,255,255,0.72)",
+  },
+  languageStatsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  languageStatCard: {
+    width: "48%",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 14,
+    backgroundColor: "rgba(255,255,255,0.08)",
+  },
+  languageStatValue: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#FFF",
+  },
+  languageStatLabel: {
+    marginTop: 2,
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#CBD5E1",
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+  },
+
+  sectionBlock: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.sm,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 10,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#0F172A",
+  },
+  sectionSubtitle: {
+    marginTop: 4,
+    fontSize: 12,
+    lineHeight: 18,
+    color: "#64748B",
+  },
+  railScroll: {
+    gap: 12,
+    paddingRight: spacing.lg,
+  },
+  railCard: {
+    width: 170,
+    minHeight: 112,
+    padding: 14,
+    borderRadius: 18,
+    backgroundColor: "#FFF",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    justifyContent: "space-between",
+  },
+  railBadge: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+    marginBottom: 10,
+  },
+  railBadgeText: {
+    fontSize: 10,
+    fontWeight: "700",
+  },
+  railEnglish: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#0F172A",
+  },
+  railLocal: {
+    marginTop: 4,
+    fontSize: 18,
+    fontWeight: "800",
+    color: colors.primary,
+  },
+
+  categoryGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  categoryCard: {
+    width: "48%",
+    minHeight: 154,
+    padding: 12,
+    borderRadius: 18,
+    borderWidth: 1,
+    backgroundColor: "#FFF",
+    justifyContent: "space-between",
+  },
+  categoryCardActive: {
+    backgroundColor: "#F8F5FF",
+  },
+  categoryCardTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  categoryCardEmoji: { fontSize: 22 },
+  categoryCountPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  categoryCountPillText: {
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  categoryCardTitle: {
+    marginTop: 8,
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#0F172A",
+  },
+  categoryCardTitleActive: {
+    color: colors.primary,
+  },
+  categoryCardSubtext: {
+    marginTop: 2,
+    fontSize: 11,
+    color: "#64748B",
+  },
+  categoryPreviewList: {
+    marginTop: 10,
+    gap: 4,
+  },
+  categoryPreviewText: {
+    fontSize: 12,
+    color: "#334155",
+  },
+  categoryPreviewTextActive: {
+    color: "#1E293B",
+  },
+  categoryPreviewMore: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#94A3B8",
+  },
 
   // Context Suggestions
   contextSection: {
