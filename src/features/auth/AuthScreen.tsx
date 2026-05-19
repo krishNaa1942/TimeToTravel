@@ -7,12 +7,12 @@ import {
   ScrollView,
   StatusBar,
   StyleSheet,
+  Text,
   useColorScheme,
   View,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Text as PaperText } from "react-native-paper";
 
 import { AuthHero } from "./components/AuthHero";
 import { AuthFormCard } from "./components/AuthFormCard";
@@ -238,7 +238,7 @@ export default function AuthScreen() {
             <View style={styles.connectorWrap}>
               <View style={styles.connectorDot} />
               <View style={styles.connectorLine} />
-              <PaperText style={styles.connectorLabel}>Start here</PaperText>
+              <Text style={styles.connectorLabel}>Start here</Text>
             </View>
 
             <Animated.View style={cardStyle}>

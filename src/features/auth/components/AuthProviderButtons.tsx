@@ -1,7 +1,12 @@
 import React, { memo } from "react";
-import { ActivityIndicator, StyleSheet, View, Platform } from "react-native";
+import {
+  ActivityIndicator,
+  Platform,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { Text } from "react-native-paper";
 
 import { PressableScale } from "@/components/UI/PressableScale";
 import { colors, spacing } from "@/theme/colors";

@@ -6,7 +6,6 @@ import { Platform } from "react-native";
 import Constants from "expo-constants";
 
 const API_PORT = 5001;
-const DEFAULT_APP_WEB_URL = "https://timetravel.app";
 
 function buildApiUrl(host: string): string {
   return `http://${host}:${API_PORT}/api`;
@@ -43,15 +42,9 @@ function isPrivateHost(host: string): boolean {
 }
 
 function getExpoHost(): string | null {
-  const expoConfig = Constants.expoConfig as
-    | (typeof Constants.expoConfig & {
-        debuggerHost?: string;
-      })
-    | undefined;
-
   const hostCandidates = [
-    expoConfig?.hostUri,
-    expoConfig?.debuggerHost,
+    Constants.expoConfig?.hostUri,
+    Constants.expoConfig?.debuggerHost,
     (Constants as any)?.manifest2?.debuggerHost,
     (Constants as any)?.manifest?.debuggerHost,
   ];
@@ -122,22 +115,7 @@ const getApiUrl = (): string => {
   return buildApiUrl(expoHost || "127.0.0.1");
 };
 
-const getAppWebUrl = (): string => {
-  const envAppUrl = process.env.EXPO_PUBLIC_APP_URL;
-  if (envAppUrl) {
-    return envAppUrl.replace(/\/+$/, "");
-  }
-
-  const extraAppUrl = Constants.expoConfig?.extra?.appUrl;
-  if (extraAppUrl) {
-    return String(extraAppUrl).replace(/\/+$/, "");
-  }
-
-  return DEFAULT_APP_WEB_URL;
-};
-
 export const API_BASE_URL = getApiUrl();
-export const APP_WEB_URL = getAppWebUrl();
 
 export const API_TIMEOUT = 15000; // 15 seconds
 

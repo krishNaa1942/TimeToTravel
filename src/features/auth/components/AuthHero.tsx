@@ -1,8 +1,7 @@
 import React, { memo } from "react";
-import { Platform, StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { Text } from "react-native-paper";
 
 import { colors, spacing, typography } from "@/theme/colors";
 

@@ -1,19 +1,15 @@
 import React, { memo } from "react";
 import {
+  ActivityIndicator,
   Linking,
   Platform,
   Pressable,
   StyleSheet,
+  Text,
   TextInput as NativeTextInput,
   View,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import {
-  Button,
-  Checkbox,
-  Text,
-  TextInput as PaperTextInput,
-} from "react-native-paper";
 
 import { PressableScale } from "@/components/UI/PressableScale";
 import { colors, spacing } from "@/theme/colors";
@@ -34,6 +30,15 @@ import {
   getAuthValue,
   getPasswordStrengthMeta,
 } from "../utils";
+
+const paperComponents =
+  Platform.OS === "web"
+    ? null
+    : (require("react-native-paper") as typeof import("react-native-paper"));
+
+const Button = paperComponents?.Button;
+const Checkbox = paperComponents?.Checkbox;
+const PaperTextInput = paperComponents?.TextInput;
 
 interface AuthFormCardProps {
   mode: AuthMode;
@@ -455,18 +460,41 @@ export const AuthFormCard = memo(function AuthFormCard({
             <Text style={styles.formError}>{errors.global.message}</Text>
           ) : null}
 
-          <Button
-            mode="contained"
-            onPress={onSubmit}
-            loading={isSubmitting}
-            disabled={isSubmitting || loadingProvider !== null}
-            style={styles.submitButton}
-            contentStyle={styles.submitContent}
-            labelStyle={styles.submitLabel}
-            buttonColor={colors.primary}
-          >
-            {submitLabel}
-          </Button>
+          {Platform.OS === "web" ? (
+            <PressableScale
+              onPress={onSubmit}
+              disabled={isSubmitting || loadingProvider !== null}
+              accessibilityRole="button"
+              accessibilityState={{
+                disabled: isSubmitting || loadingProvider !== null,
+                busy: isSubmitting,
+              }}
+              style={[
+                styles.submitButton,
+                styles.webSubmitButton,
+                (isSubmitting || loadingProvider !== null) &&
+                  styles.submitButtonDisabled,
+              ]}
+            >
+              <View style={styles.webSubmitContent}>
+                {isSubmitting ? <ActivityIndicator color="#FFFFFF" /> : null}
+                <Text style={styles.submitLabel}>{submitLabel}</Text>
+              </View>
+            </PressableScale>
+          ) : (
+            <Button
+              mode="contained"
+              onPress={onSubmit}
+              loading={isSubmitting}
+              disabled={isSubmitting || loadingProvider !== null}
+              style={styles.submitButton}
+              contentStyle={styles.submitContent}
+              labelStyle={styles.submitLabel}
+              buttonColor={colors.primary}
+            >
+              {submitLabel}
+            </Button>
+          )}
 
           <View style={styles.bottomRow}>
             <Text style={styles.bottomPrompt}>{switchPrompt}</Text>
@@ -758,6 +786,12 @@ const styles = StyleSheet.create({
     marginTop: 2,
     borderRadius: 18,
   },
+  webSubmitButton: {
+    minHeight: 50,
+    backgroundColor: colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   submitContent: {
     minHeight: 50,
   },
@@ -765,6 +799,16 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "800",
     letterSpacing: 0.2,
+  },
+  webSubmitContent: {
+    minHeight: 50,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
+  submitButtonDisabled: {
+    opacity: 0.72,
   },
   bottomRow: {
     flexDirection: "row",
